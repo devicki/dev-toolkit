@@ -2,20 +2,26 @@
 
 이 프로젝트의 ERD는 Claude Code `erd` 플러그인(devicki/dev-toolkit)으로 관리합니다.
 
+## ERD 단위
+- **ERD 단위 = DB 하나 = `erd.env` 가 있는 폴더.** 단일 레포면 루트, 모노레포면 DB 를 가진 서비스 폴더마다 있다.
+- 단위 목록: `make erd-list`. 아래 경로(`db/`, `docs/schema/`)는 각 단위 폴더 기준이다.
+
 ## 원칙
 - 스키마 원본은 `erd.env` 의 `ERD_SOURCE` 가 정한다.
   - `dbml` : `db/modules/*.dbml` 이 원본. 테이블 변경은 여기서만.
   - `migrations` : ORM/마이그레이션이 원본. DBML(`db/schema.generated.dbml`)과 문서는 파생물.
 - `db/schema.sql`, `docs/schema/` 는 자동 생성물이므로 직접 고치지 않는다.
-- 스키마를 바꾸면 `make erd` 로 문서를 갱신하고 같은 커밋에 올린다.
+- 스키마를 바꾸면 `make erd P=<단위>` 로 문서를 갱신하고 같은 커밋에 올린다.
 
 ## 명령
 | 명령 | 설명 |
 |---|---|
-| `make erd` | 문서 생성 + lint (Docker 또는 `PG=`/`MY=` 로 기존 서버) |
-| `make erd-check` | 문서 최신 여부 검사 (CI용) |
-| `make erd-sql` | DBML → `db/schema.sql` |
-| `make erd-view` | 터미널에서 문서 보기 (glow) |
+| `make erd` | 모든 단위 문서 생성 + lint (Docker 또는 `PG=`/`MY=` 로 기존 서버) |
+| `make erd P=apps/api` | 특정 단위만 |
+| `make erd-check [P=..]` | 문서 최신 여부 검사 (CI용) |
+| `make erd-sql [P=..]` | DBML → `db/schema.sql` |
+| `make erd-list` | ERD 단위 목록 |
+| `make erd-view [P=..]` | 터미널에서 문서 보기 (glow) |
 
 ## Claude Code 명령
 | 명령 | 용도 |

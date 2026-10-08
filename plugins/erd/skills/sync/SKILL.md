@@ -1,18 +1,22 @@
 ---
 name: sync
 description: ERD를 최신 상태로 유지한다 — tbls 문서 재생성, 문서·DBML·ORM 모델·실제 DB 간 차이(drift) 점검, DBML 변경분 마이그레이션 생성 연동(Atlas/Alembic 등), CI 검사 설정. "ERD 최신화", "문서 갱신", "스키마랑 코드 차이 확인", "마이그레이션 만들어줘", "CI에 erd 검사 추가"에 사용.
-argument-hint: "[doc|drift|migrate|ci]"
+argument-hint: "[doc|drift|migrate|ci] [--project <단위 폴더>|--all-units]"
 ---
 
 # /erd:sync — 동기화와 유지보수
 
 공용 자료: `${CLAUDE_PLUGIN_ROOT}/shared/references/` — `source-of-truth.md`, `migration-tools.md`, `tbls-guide.md`
 
+## 대상 ERD 단위
+`${CLAUDE_PLUGIN_ROOT}/shared/references/units.md` 의 "대상 단위 결정"을 따른다 (`--project <폴더>` → 가장 가까운 erd.env → 단위가 하나면 그것 → 아니면 질문. 레포 루트에서 단위 지정 없이 `doc`/`drift` 를 요청하면 모든 단위를 대상으로 해도 된다).
+시작할 때 `대상: <단위> (<DB>, ERD_SOURCE=<값>)` 를 한 줄로 밝힌다. 아래의 경로(`db/`, `docs/schema/`, `.tbls.yml`, `erd.env`)는 모두 **단위 폴더 기준**이고, 명령은 레포 루트에서 `make erd P=<단위>` 로 실행한다.
+
 `erd.env` 가 없으면 `/erd:init` 부터 진행한다. 인자가 없으면 `doc` → `drift` 순으로 수행하고, 필요할 때 `migrate`/`ci` 를 제안한다.
 
 ## doc — 문서 갱신
-1. `make erd` (기존 서버 사용 시 `make erd PG=...`). 임시 DB 수단(Docker/psql)이 없으면 `/erd:doctor` 안내.
-2. 결과 요약: 변경된 문서(`git status docs/schema`), lint 경고.
+1. `make erd P=<단위>` (모든 단위: `make erd`, 기존 서버 사용 시 `PG=...` 추가). 임시 DB 수단(Docker/psql)이 없으면 `/erd:doctor` 안내.
+2. 결과 요약: 변경된 문서(`git status <단위>/docs/schema`), lint 경고.
 3. 새 테이블이 어느 viewpoint 에도 없으면(requireViewpoints 경고) 소속 모듈을 제안하고 `.tbls.yml` 에 추가 → 재실행.
 
 ## drift — 차이 점검
@@ -20,7 +24,7 @@ argument-hint: "[doc|drift|migrate|ci]"
 
 | 비교 | 방법 |
 |---|---|
-| 문서 ↔ 원본 | `make erd-check` (다르면 doc 수행 제안) |
+| 문서 ↔ 원본 | `make erd-check [P=<단위>]` (다르면 doc 수행 제안) |
 | ORM 모델 ↔ 마이그레이션 (migrations) | 도구의 확인 명령 사용: `alembic check`, `python manage.py makemigrations --check --dry-run`, `npx prisma migrate diff ...`(설치된 Prisma 버전의 `--help` 로 옵션 확인) 등. 없으면 모델 코드와 `docs/schema` 를 직접 대조 |
 | DBML ↔ 백엔드 엔티티 (dbml) | 엔티티/모델 코드를 읽어 테이블·컬럼·타입·null·관계 대조 |
 | 원본 ↔ 실제 개발/운영 DB | 사용자가 접속 정보를 줄 때만. `tbls diff '<DSN>' docs/schema` (읽기 전용 계정 권장) |
@@ -30,13 +34,13 @@ argument-hint: "[doc|drift|migrate|ci]"
 ## migrate — DB 반영용 마이그레이션 (ERD_SOURCE=dbml)
 `migration-tools.md` 의 "ERD_SOURCE=dbml 일 때 DB 반영" 을 따른다.
 1. 프로젝트에 마이그레이션 디렉터리/도구가 있는지 확인. 없으면 선택지를 제시: (a) 개발 초기라 `db/schema.sql` 재생성으로 충분 (b) Atlas 도입 (c) 사람이 작성. 도입 결정은 사용자.
-2. Atlas 사용 시: `atlas migrate diff <이름> --dir file://db/migrations --to file://db/schema.sql --dev-url docker://postgres/16/dev` (MySQL: `docker://mysql/8/dev`).
+2. Atlas 사용 시 (단위 폴더에서): `atlas migrate diff <이름> --dir file://db/migrations --to file://db/schema.sql --dev-url docker://postgres/16/dev` (MySQL: `docker://mysql/8/dev`).
 3. 생성된 SQL 을 검토해 위험 요소(DROP, rename 이 drop+add 로 나온 경우, NOT NULL 추가 시 기존 데이터)를 보고한다. **대상 DB 에 적용은 사용자가 직접** 하거나 명시적으로 요청할 때만.
 
 ERD_SOURCE=migrations 이면 이 단계 대신 프로젝트 도구의 마이그레이션 생성 명령을 안내/실행한다(사용자 확인 후).
 
 ## ci — 자동 검사
-CI 에 `make erd-check` 를 추가한다(사용자 확인 후). GitHub Actions 예:
+CI 에 `make erd-check` 를 추가한다(사용자 확인 후). 모노레포면 모든 단위를 검사하며, 변경된 단위만 검사하려면 변경 경로로 `P=` 를 넘기는 단계를 추가할 수 있다. GitHub Actions 예:
 
 ```yaml
 name: erd
