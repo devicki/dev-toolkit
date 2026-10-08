@@ -1,0 +1,9 @@
+// 모듈 파일 예시 (복사해서 사용 후 이 파일은 삭제)
+// use { table users } from './user'   // 다른 모듈 테이블 참조
+
+Table example_items {
+  id bigint [pk, increment, note: 'PK']
+  name varchar(100) [not null, note: '이름']
+  created_at timestamptz [not null, default: `now()`, note: '생성 일시']
+  Note: '예시 테이블'
+}

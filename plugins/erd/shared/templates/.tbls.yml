@@ -1,0 +1,27 @@
+# tbls 설정 (erd 플러그인이 생성): 문서 위치, ERD 형식, 모듈(viewpoint), 품질 검사
+name: __PROJECT_NAME__
+docPath: docs/schema
+
+er:
+  format: mermaid     # GitHub·VS Code·AI가 읽기 좋은 텍스트 형식
+  comment: true
+
+# 모듈 단위 문서·ERD. db/modules/*.dbml 과 1:1로 맞춘다.
+viewpoints: []
+#  - id: user
+#    name: 회원 모듈
+#    desc: 회원 관련 테이블
+#    tables:
+#      - users
+
+lint:
+  requireTableComment:
+    enabled: true
+  requireColumnComment:
+    enabled: true
+  requireForeignKeyIndex:
+    enabled: true
+  unrelatedTable:
+    enabled: true
+  requireViewpoints:
+    enabled: true
