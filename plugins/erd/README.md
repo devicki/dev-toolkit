@@ -19,14 +19,32 @@ Alembic·Prisma·Flyway 등 기존 마이그레이션 도구가 있는 프로젝
 ## 프로젝트에 생기는 파일
 
 ```
-erd.env                  # 스키마 원본(dbml|migrations), DB 종류, 마이그레이션 명령
-.tbls.yml                # 문서 위치, Mermaid ERD, 모듈(viewpoints), lint 규칙
-erd.mk                   # make erd / erd-check / erd-sql / erd-view
+# 레포 루트 (하나)
+erd.mk                   # make erd / erd-check / erd-sql / erd-list / erd-view  [P=<단위>]
 scripts/erd-doc.sh       # (DBML|마이그레이션) → 임시 DB → tbls 문서
+docs/ERD_GUIDE.md        # 팀원용 작업 규칙
+
+# ERD 단위 폴더 (단일 레포면 루트와 같음)
+erd.env                  # 스키마 원본(dbml|migrations), DB 종류, 마이그레이션 명령, 관련 소스
+.tbls.yml                # 문서 위치, Mermaid ERD, 모듈(viewpoints), lint 규칙
 db/schema.dbml           # (dbml 원본일 때) 진입점
 db/modules/*.dbml        # (dbml 원본일 때) 모듈별 설계
 docs/schema/             # 생성 문서: README.md, viewpoint-*.md, 테이블별 md, schema.json
-docs/ERD_GUIDE.md        # 팀원용 작업 규칙
+```
+
+## 모노레포
+
+**ERD 단위 = DB 하나 = `erd.env` 가 있는 폴더**입니다. 서비스별 DB 라면 서비스 폴더마다, 공유 DB 라면 스키마를 가진 폴더 하나에 둡니다.
+`scripts/erd-doc.sh` 와 `erd.mk` 는 레포 루트에 하나만 두고, `make erd` (전체) / `make erd P=apps/api` (하나) 로 실행합니다.
+스킬은 현재 위치에서 가장 가까운 `erd.env` 를 대상으로 삼고, 애매하면 묻거나 `--project <폴더>` 로 지정할 수 있습니다.
+DB 가 없는 앱(프론트 등)은 `erd.env` 의 `ERD_RELATED_SOURCES` 로 연결해 import·review 때 함께 참고합니다.
+
+```
+monorepo/
+├── erd.mk  scripts/erd-doc.sh
+├── apps/api/      erd.env .tbls.yml db/ docs/schema/   (PostgreSQL)
+├── apps/billing/  erd.env .tbls.yml docs/schema/       (MySQL)
+└── apps/web/      (api 의 관련 소스)
 ```
 
 ## 요구 사항

@@ -17,6 +17,14 @@ db/
 - 진입점은 `use * from './modules/<모듈>'` 만 둔다. 테이블 정의를 넣지 않는다.
 - `TableGroup`, 색상, sticky note 는 dbdiagram 유료 기능에서만 시각화되므로 모듈 분리는 **파일**로 한다.
 
+## 다른 ERD 단위(다른 DB) 참조
+
+모노레포에서 DB 가 다른 서비스의 테이블은 `ref` 로 연결할 수 없다. note 로 표시한다 (`units.md` 참고):
+
+```dbml
+user_id bigint [not null, note: '회원 ID → api: users.id (다른 DB, FK 없음)']
+```
+
 ## 명명
 
 | 대상 | 규칙 | 예 |

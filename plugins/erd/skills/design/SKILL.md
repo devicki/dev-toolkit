@@ -1,19 +1,25 @@
 ---
 name: design
 description: 대화형으로 ERD를 설계·수정한다 — 초기 도메인 설계, 모듈·테이블·컬럼·관계 추가와 변경, 요구사항을 스키마로 옮기기. 변경은 DBML(또는 ORM 원본)에 반영하고 tbls 문서를 갱신한다. "주문 테이블 설계해줘", "회원에 등급 추가", "이 기능에 필요한 테이블", "ERD 같이 설계하자"에 사용.
-argument-hint: "[설계할 기능·모듈·변경 내용]"
+argument-hint: "[설계할 기능·모듈·변경 내용] [--project <단위 폴더>]"
 ---
 
 # /erd:design — 대화형 설계·수정
 
 공용 자료: `${CLAUDE_PLUGIN_ROOT}/shared/references/` — `dbml-conventions.md`(필수), `source-of-truth.md`, `migration-tools.md`
 
+## 대상 ERD 단위
+`${CLAUDE_PLUGIN_ROOT}/shared/references/units.md` 의 "대상 단위 결정"을 따른다 (`--project <폴더>` → 가장 가까운 erd.env → 단위가 하나면 그것 → 아니면 질문).
+시작할 때 `대상: <단위> (<DB>, ERD_SOURCE=<값>)` 를 한 줄로 밝힌다. 아래의 경로(`db/`, `docs/schema/`, `.tbls.yml`, `erd.env`)는 모두 **단위 폴더 기준**이고, 명령은 레포 루트에서 `make erd P=<단위>` 로 실행한다.
+
 ## 0. 맥락 파악 (매번)
 - `erd.env` 가 없으면 `/erd:init` 부터 진행한다.
 - `ERD_SOURCE` 확인:
   - `dbml` → 변경 대상은 `db/modules/*.dbml`.
   - `migrations` → 변경 대상은 ORM 모델 + 새 마이그레이션. DBML 은 제안용(`db/proposals/<이름>.dbml`)으로만 쓰고, 확정 후 모델·마이그레이션을 수정한다. 마이그레이션 생성은 프로젝트 도구의 명령으로 한다 (예: `alembic revision --autogenerate -m ...`).
-- 현재 구조는 `docs/schema/README.md`, 관련 `viewpoint-*.md`, 필요한 테이블 문서를 읽어 파악한다. 문서가 없거나 오래됐으면 `make erd` 를 먼저 실행.
+- 현재 구조는 `docs/schema/README.md`, 관련 `viewpoint-*.md`, 필요한 테이블 문서를 읽어 파악한다. 문서가 없거나 오래됐으면 `make erd P=<단위>` 를 먼저 실행.
+- 관련 소스: 단위 폴더 + `erd.env` 의 `ERD_RELATED_SOURCES` 폴더.
+- 다른 단위(다른 DB)의 테이블을 참조해야 하면 FK 대신 note 로 표시한다 (`units.md` "서비스 간 참조"). 새 테이블이 다른 단위에 속하는 게 맞아 보이면 제안한다.
 
 ## 1. 요구사항 듣기 — 한 번에 질문 1~3개
 대화형으로 진행한다. 큰 질문지를 던지지 말고, 답에 따라 다음 질문을 고른다.
@@ -39,8 +45,8 @@ argument-hint: "[설계할 기능·모듈·변경 내용]"
 - 확인을 받은 뒤 파일을 수정한다.
   - 새 모듈: `db/modules/<모듈>.dbml` 생성 + `db/schema.dbml` 에 `use` + `.tbls.yml` viewpoint 추가.
   - 다른 모듈 참조: `use { table x } from './<모듈>'`.
-- `make erd` 실행 → 실패 시 원인 수정 → lint 경고 처리.
-- `migrations` 원본이면: 모델 수정 → 프로젝트 도구로 마이그레이션 생성 → 생성된 마이그레이션 검토 결과 보고 → `make erd`.
+- `make erd P=<단위>` 실행 → 실패 시 원인 수정 → lint 경고 처리.
+- `migrations` 원본이면: 모델 수정 → 프로젝트 도구로 마이그레이션 생성 → 생성된 마이그레이션 검토 결과 보고 → `make erd P=<단위>`.
 
 ## 4. DB 반영 안내 (ERD_SOURCE=dbml)
 - 아직 데이터 보존이 필요 없는 단계: "개발 DB 는 `db/schema.sql` 로 재생성" 안내.

@@ -2,28 +2,63 @@
 # ERD 문서 생성: (DBML 또는 마이그레이션) → 임시 DB → tbls 문서
 # 생성: erd 플러그인 (https://github.com/devicki/dev-toolkit)
 #
-# 사용법: scripts/erd-doc.sh [doc|check|sql]
+# 사용법: scripts/erd-doc.sh [doc|check|sql] [ERD 단위 폴더]
 #   doc   : docs/schema 를 새로 생성 + lint (기본)
 #   check : 문서가 현재 스키마와 일치하는지 검사 (다르면 exit 1, CI용)
 #   sql   : DBML → SQL 만 생성 (ERD_SOURCE=dbml 일 때)
 #
-# 설정: 프로젝트 루트의 erd.env (없으면 기본값)
+# ERD 단위 = erd.env 가 있는 폴더 (DB 하나당 하나). 모노레포면 서비스마다 둘 수 있다.
+# 단위 폴더를 생략하면: 현재 위치에서 위로 가장 가까운 erd.env → 없으면 레포 안 erd.env 가 하나일 때 그것.
 # 환경변수로 덮어쓰기: PG=postgres://user:pass@host:5432  (기존 PostgreSQL 서버 사용)
 #                      MY=mysql://user:pass@host:3306      (기존 MySQL 서버 사용)
 set -euo pipefail
 MODE="${1:-doc}"
-cd "$(dirname "$0")/.."
+UNIT_ARG="${2:-}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# ── 설정 ─────────────────────────────────────────────
+# ── 대상 ERD 단위 결정 ───────────────────────────────
+find_up() {
+  local d="$1"
+  while :; do
+    [ -f "$d/erd.env" ] && { echo "$d"; return 0; }
+    { [ "$d" = "$REPO_ROOT" ] || [ "$d" = "/" ]; } && return 1
+    d="$(dirname "$d")"
+  done
+}
+list_units() {
+  find "$REPO_ROOT" -name erd.env -not -path '*/node_modules/*' -not -path '*/.git/*' \
+    -not -path '*/vendor/*' -not -path '*/.venv/*' 2>/dev/null | sed 's#/erd.env$##' | sort
+}
+if [ -n "$UNIT_ARG" ]; then
+  [ -d "$UNIT_ARG" ] || { echo "✘ 단위 폴더가 없습니다: $UNIT_ARG"; exit 2; }
+  cd "$UNIT_ARG"
+elif UNIT_DIR="$(find_up "$PWD")"; then
+  cd "$UNIT_DIR"
+else
+  UNITS="$(list_units)"
+  case "$(printf '%s' "$UNITS" | grep -c . || true)" in
+    0) cd "$REPO_ROOT" ;;
+    1) cd "$UNITS" ;;
+    *) echo "✘ ERD 단위가 여러 개입니다. 단위 폴더를 지정하세요:"; printf '%s\n' "$UNITS" | sed "s#^$REPO_ROOT/*#  #; s#^  \$#  .#"
+       echo "  예: scripts/erd-doc.sh $MODE <단위 폴더>   또는   make erd P=<단위 폴더>"; exit 2 ;;
+  esac
+fi
+UNIT_REL="$(realpath --relative-to="$REPO_ROOT" "$PWD" 2>/dev/null || python3 -c 'import os,sys;print(os.path.relpath(sys.argv[1],sys.argv[2]))' "$PWD" "$REPO_ROOT")"
+echo "■ ERD 단위: $UNIT_REL"
+
+# ── 설정 (단위 폴더 기준 상대 경로) ──────────────────
 [ -f erd.env ] && set -a && . ./erd.env && set +a
 ERD_DIALECT="${ERD_DIALECT:-postgres}"          # postgres | mysql
 ERD_SOURCE="${ERD_SOURCE:-dbml}"                 # dbml | migrations
 ERD_DBML_ENTRY="${ERD_DBML_ENTRY:-db/schema.dbml}"
 ERD_SQL_OUT="${ERD_SQL_OUT:-db/schema.sql}"
-ERD_MIGRATE_CMD="${ERD_MIGRATE_CMD:-}"           # ERD_SOURCE=migrations 일 때 실행할 명령 (DATABASE_URL 제공)
+ERD_MIGRATE_CMD="${ERD_MIGRATE_CMD:-}"           # ERD_SOURCE=migrations 일 때 실행할 명령 (DATABASE_URL 제공, 단위 폴더에서 실행)
 ERD_DERIVED_DBML="${ERD_DERIVED_DBML:-db/schema.generated.dbml}"
 ERD_DOCKER_IMAGE="${ERD_DOCKER_IMAGE:-}"
-DOC_DB="erd_doc"
+# 단위마다 임시 DB 이름을 다르게 (같은 서버를 써도 충돌하지 않도록)
+SLUG="$(printf '%s' "$UNIT_REL" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '_' | sed 's/_\+/_/g; s/^_//; s/_$//' | cut -c1-40)"
+DOC_DB="erd_doc${SLUG:+_$SLUG}"
 
 # tbls의 공용 /tmp 권한 문제 예방 (계정별 임시 폴더)
 if [ -z "${TMPDIR:-}" ] || [ "${TMPDIR:-}" = "/tmp" ]; then
@@ -106,11 +141,15 @@ if [ "$MODE" = "check" ]; then
   DIFF=$(tbls diff "$DSN" docs/schema 2>&1) || true
   if [ -n "$DIFF" ]; then
     echo "$DIFF"
-    echo "✘ docs/schema 가 현재 스키마와 다릅니다. 'make erd' 실행 후 함께 커밋하세요."
+    echo "✘ [$UNIT_REL] docs/schema 가 현재 스키마와 다릅니다. 'make erd P=$UNIT_REL' 실행 후 함께 커밋하세요."
     exit 1
   fi
-  tbls lint --dsn "$DSN"
-  echo "✔ 문서가 최신입니다"
+  echo "  문서가 최신입니다"
+  if ! tbls lint --dsn "$DSN"; then
+    if [ "${ERD_CHECK_LINT:-warn}" = "strict" ]; then echo "✘ [$UNIT_REL] lint 실패 (ERD_CHECK_LINT=strict)"; exit 1; fi
+    echo "⚠ lint 경고 (CI를 실패시키려면 erd.env 에 ERD_CHECK_LINT=strict)"
+  fi
+  echo "✔ [$UNIT_REL] 검사 통과"
 else
   echo "▶ 문서 생성 (docs/schema)"
   tbls doc --dsn "$DSN" --rm-dist >/dev/null

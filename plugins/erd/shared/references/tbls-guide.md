@@ -4,7 +4,7 @@
 
 ## 이 플러그인에서의 역할
 
-tbls 는 **실제 DB**(임시 DB)를 읽어 다음을 만든다. 직접 실행하지 말고 `make erd` / `scripts/erd-doc.sh` 를 쓴다.
+tbls 는 **실제 DB**(임시 DB)를 읽어 다음을 만든다. 직접 실행하지 말고 레포 루트에서 `make erd [P=<단위>]` / `scripts/erd-doc.sh <모드> <단위>` 를 쓴다. 아래 경로는 ERD 단위 폴더 기준이다.
 
 - `docs/schema/README.md` : 전체 테이블 목록 + 전체 ERD (Mermaid)
 - `docs/schema/viewpoint-<id>.md` : 모듈별 테이블 + 모듈 ERD
