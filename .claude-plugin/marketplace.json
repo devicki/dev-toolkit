@@ -1,0 +1,15 @@
+{
+  "name": "dev-toolkit",
+  "description": "devicki의 개발 도구 플러그인 모음",
+  "owner": {
+    "name": "devicki",
+    "url": "https://github.com/devicki"
+  },
+  "plugins": [
+    {
+      "name": "erd",
+      "source": "./plugins/erd",
+      "description": "DBML로 ERD를 설계하고 tbls로 모듈별 문서를 생성·유지보수합니다. 초기 구축, 소스코드/ORM/문서에서 가져오기, 대화형 설계, 검토, 동기화를 지원합니다."
+    }
+  ]
+}

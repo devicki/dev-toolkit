@@ -1,0 +1,8 @@
+// 전체 스키마 진입점: 모듈 파일을 모아 온다.
+// 새 모듈을 만들면 여기에 use 한 줄을 추가하고 .tbls.yml viewpoints 에도 등록한다.
+Project __PROJECT_NAME__ {
+  database_type: '__DB_TYPE__'
+  Note: '설계 원본은 db/modules/*.dbml'
+}
+
+// use * from './modules/user'

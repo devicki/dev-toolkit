@@ -1,0 +1,13 @@
+{
+  "name": "erd",
+  "version": "0.1.0",
+  "description": "DBML(설계 원본) + tbls(문서·ERD·lint)로 프로젝트 ERD를 설계하고 유지보수합니다.",
+  "author": {
+    "name": "devicki",
+    "url": "https://github.com/devicki"
+  },
+  "homepage": "https://github.com/devicki/dev-toolkit",
+  "repository": "https://github.com/devicki/dev-toolkit",
+  "license": "MIT",
+  "keywords": ["erd", "dbml", "tbls", "database", "schema", "migration", "data-modeling"]
+}
