@@ -8,7 +8,7 @@
 #       [--update-scripts] [--dry-run]
 #
 # 하는 일
-#   레포 루트(한 번): scripts/erd-doc.sh, erd.mk, Makefile include, docs/ERD_GUIDE.md, .gitignore
+#   레포 루트(한 번): scripts/erd-doc.sh, scripts/erd-changed.sh, erd.mk, Makefile include, docs/ERD_GUIDE.md, .gitignore
 #   단위 폴더:        erd.env(값 채움), .tbls.yml(이름 치환·관리 테이블 exclude), db/ (dbml 일 때)
 #   에이전트 지침:    단위 CLAUDE.md(또는 AGENTS.md)에 마커 블록, 모노레포면 루트에 단위 목록 블록
 # 규칙
@@ -75,7 +75,8 @@ echo "# erd 템플릿 설치: 단위 '$UNIT' (루트 $ROOT)"
 
 # ── 레포 루트 (한 번) ─────────────────────────────────
 place scripts/erd-doc.sh "$ROOT/scripts/erd-doc.sh" script
-[ $DRY = 1 ] || chmod +x "$ROOT/scripts/erd-doc.sh"
+place scripts/erd-changed.sh "$ROOT/scripts/erd-changed.sh" script
+[ $DRY = 1 ] || chmod +x "$ROOT/scripts/erd-doc.sh" "$ROOT/scripts/erd-changed.sh"
 place erd.mk "$ROOT/erd.mk" script
 if [ -f "$ROOT/Makefile" ]; then
   if grep -Eq '^[[:space:]]*-?include[[:space:]]+erd\.mk' "$ROOT/Makefile"; then say "=" "$ROOT/Makefile" "include erd.mk 있음"
