@@ -1,66 +1,116 @@
 ---
 name: import
-description: 기존 자산에서 DBML/ERD를 만들어 낸다 — 화면·프론트 소스, 백엔드 API·DTO, ORM 모델·마이그레이션, 기존 ERD·ADR·기획 문서, 실행 중인 DB. 출처를 자동 감지하거나 인자로 지정(code|orm|docs|db). "소스코드에서 ERD 뽑아줘", "기존 문서 DBML로 옮겨줘", "ORM 모델 기준으로 ERD 만들어줘"에 사용.
-argument-hint: "[code|orm|docs|db] [경로...] [--project <단위 폴더>]"
+description: >
+  기존 자산(화면·API 소스, ORM·마이그레이션, ERD·ADR 문서, 실행 중 DB)에서 DBML 생성 또는 기존 DBML 보강. 산출물: db/modules/*.dbml + [추정] 목록.
+  트리거: "소스코드에서 ERD 뽑아줘", "문서 DBML로 옮겨줘", "이 화면 보고 ERD 보강" / "reverse engineer ERD".
+  비활성: 요구사항 기반 새 설계(→ design), 품질 검토(→ review).
+argument-hint: "[code|orm|docs|db|augment] [경로...] [--project <단위 폴더>]"
+allowed-tools:
+  - "Bash(bash ${CLAUDE_PLUGIN_ROOT}/shared/scripts/*)"
+  - "Bash(make erd*)"
 ---
 
-# /erd:import — 기존 자산에서 DBML 만들기
+# /erd:import — 기존 자산에서 DBML 만들기·보강
 
-공용 자료: `${CLAUDE_PLUGIN_ROOT}/shared/references/` — `source-of-truth.md`, `dbml-conventions.md`, `migration-tools.md`
+> **한 줄 정의**: 이미 있는 것(코드·문서·DB)에서 스키마를 뽑아 DBML 로 옮긴다. 새 요구사항 설계는 design 이 맡는다.
+> **핵심 산출물**: `<단위>/db/modules/<모듈>.dbml`, `<단위>/docs/schema/`, `[추정]` 목록
 
-## 대상 ERD 단위
-`${CLAUDE_PLUGIN_ROOT}/shared/references/units.md` 의 "대상 단위 결정"을 따른다 (`--project <폴더>` → 가장 가까운 erd.env → 단위가 하나면 그것 → 아니면 질문).
-시작할 때 `대상: <단위> (<DB>, ERD_SOURCE=<값>)` 를 한 줄로 밝힌다. 아래의 경로(`db/`, `docs/schema/`, `.tbls.yml`, `erd.env`)는 모두 **단위 폴더 기준**이고, 명령은 레포 루트에서 `make erd P=<단위>` 로 실행한다.
+## 스킬 파일 (`${CLAUDE_PLUGIN_ROOT}/shared/`)
+- `scripts/find-units.sh`, `scripts/detect-project.sh <단위>` — 대상 단위·출처 후보 탐색
+- `references/rules.md` — 강제 규칙·금지 (필수)
+- `references/dbml-conventions.md` — DBML 작성 규칙·모듈 분할·규모 감각
+- `references/migration-tools.md` — ORM/마이그레이션 → DBML 경로, `sql2dbml`/`db2dbml`
+- `references/units.md` — 단위 결정·다른 DB 참조 표기
+- `references/report-templates.md` — 마무리 보고 양식(3번)
+- `references/errors.md` — `ERD_EXIT` 대응
 
-## 0. 준비
-- `erd.env` 가 없으면 `/erd:init` 을 먼저 진행한다 (init 이 import 로 다시 넘겨 준다).
-- 출처가 인자로 없으면 `bash ${CLAUDE_PLUGIN_ROOT}/shared/scripts/detect-project.sh <단위 폴더>` 결과와 `erd.env` 의 `ERD_RELATED_SOURCES` 폴더(모노레포의 프론트 등)에서 후보를 고르고, 여러 개면 사용자에게 우선순위를 묻는다. 여러 출처를 함께 쓸 수 있다 (예: ORM 이 기준, 화면 소스로 보강).
+## 강제 규칙 (최우선) — 전체는 `rules.md`
+1. 코드·문서에서 **확인한 것만** 확정값으로 쓴다. 추론한 타입·길이·null·관계 방향은 note 에 `[추정]` (R7).
+2. 문서 생성은 `make erd P=<단위>` 로만 (R1). `dbml2sql` 을 직접 돌려 문법을 확인하지 않는다 — 오류여도 exit 0.
+3. 출처끼리 다르면 임의로 고르지 말고 차이 목록을 보여 주고 결정을 받는다.
 
-## 출처별 절차
+## 0단계: 대상 단위·사전 조건
+- `units.md` "대상 단위 결정" (`--project` → 가장 가까운 erd.env → 하나뿐이면 그것 → 질문). 시작할 때 `대상: <단위> (<DB>, ERD_SOURCE=<값>)` 를 밝힌다.
+- `erd.env` 가 없으면 `/erd:init` 먼저.
+- 출처 후보: `detect-project.sh <단위>` + `erd.env` 의 `ERD_RELATED_SOURCES` 폴더.
 
-### A. orm — ORM 모델·마이그레이션 (ERD_SOURCE=migrations)
-1. `erd.env` 의 `ERD_MIGRATE_CMD` 로 `make erd P=<단위>` 실행 → `docs/schema/` 와 `db/schema.generated.dbml` 생성.
-2. 마이그레이션이 없거나 실행 불가하면 모델 코드를 직접 읽어 DBML 초안을 작성한다(아래 C 의 추출 규칙 사용). 이때는 "코드에서 추론한 초안"임을 명시.
-3. 모델 코드와 생성 결과를 대조해 차이(모델엔 있는데 마이그레이션에 없는 필드 등)를 보고한다.
+## 1단계: 모드 선택
+요청에서 분명하면 묻지 않는다. 모호할 때만 한 번 묻는다. 여러 출처를 함께 쓸 수 있다 (예: orm 기준 + code 로 보강).
 
-### B. db — 실행 중인 DB
-1. 접속 정보는 사용자에게 받는다. **읽기 전용 계정 권장**, 운영 DB 라면 한 번 더 확인.
-2. `db2dbml postgres '<conn>' -o db/schema.imported.dbml` (MySQL 은 `mysql`).
-3. 결과를 모듈 단위로 나눠 `db/modules/*.dbml` 로 재구성(아래 "모듈 분할").
+| 모드 | 상황 | 초반 접근 |
+|---|---|---|
+| **orm** | ORM 모델·마이그레이션이 있음 (`ERD_SOURCE=migrations`) | `make erd P=<단위>` → `db/schema.generated.dbml` + 문서 → 모델 코드와 대조 |
+| **db** | 실행 중인 DB 만 있음 | 접속 정보를 받아 `db2dbml` → 모듈 분할 |
+| **code** | 화면·API·DTO 소스만 있음 (DB 미구현) | 엔티티 후보 추출 → 사용자 검증 → 컬럼·관계 |
+| **docs** | ERD·ADR·기획·테이블 정의서 | 문서 수집 → DBML 이관 → 문서 간·코드와의 차이 보고 |
+| **augment** | **이미 DBML 이 있고** 새 소스(기능·화면)로 보강 | 기존 DBML 읽기 → 새 소스에서 추가분만 추출 → 기존 테이블과 매칭(재사용/컬럼 추가/새 테이블) → diff 로 제안 |
 
-### C. code — 화면·프론트·백엔드 소스 (DB 없음)
-단위 폴더 + `ERD_RELATED_SOURCES` 폴더를 함께 읽는다. 다른 단위(다른 DB)의 엔티티로 보이는 것은 이 단위에 넣지 말고 "다른 단위 소속 후보"로 따로 보고한다.
+## 2단계: 모드별 절차
 
-추출 대상과 단서:
+### orm
+1. `make erd P=<단위>` (원본은 마이그레이션). 실패하면 `ERD_EXIT` 로 `errors.md`.
+2. 마이그레이션이 없거나 실행 불가면 모델 코드를 읽어 DBML 초안 — "코드에서 추론한 초안"이라고 명시, 불확실한 값은 `[추정]`.
+3. 모델 ↔ 생성 결과 차이(모델엔 있는데 마이그레이션에 없는 필드 등)를 보고.
 
-| 소스 | 엔티티/컬럼 단서 |
+### db
+1. 접속 정보는 사용자에게 받는다. **읽기 전용 계정 권장**, 운영 DB 면 한 번 더 확인.
+2. `db2dbml postgres '<conn>' -o <단위>/db/schema.imported.dbml` (MySQL: `mysql`) — 이 명령은 읽기만 하므로 R1 예외.
+3. "모듈 분할"로 `db/modules/*.dbml` 재구성.
+
+### code
+단위 폴더 + `ERD_RELATED_SOURCES` 를 읽는다. 다른 단위(다른 DB) 소속으로 보이는 엔티티는 넣지 말고 "다른 단위 후보"로 따로 보고.
+
+| 소스 | 단서 |
 |---|---|
-| 프론트 폼 | 입력 필드 이름·타입·필수·maxLength, select 옵션(상태값) |
-| 프론트 목록·상세 | 표시 컬럼, 정렬·필터·검색 조건(→ 인덱스 후보) |
-| 라우트·메뉴 | 업무 도메인 경계(→ 모듈 후보) |
-| API 스펙(OpenAPI/GraphQL) | 리소스 = 테이블 후보, 스키마 필드, 경로의 중첩 관계(`/orders/{id}/items` → FK) |
-| 백엔드 DTO/서비스 | 저장·조회 필드, 관계 조회(join), 트랜잭션 묶음 |
-| 타입 정의 | TS interface, zod, pydantic, Java record 등 |
+| 프론트 폼 | 필드 이름·타입·필수·maxLength, select 옵션(상태값) |
+| 프론트 목록·상세 | 표시 컬럼, 정렬·필터·검색(→ 인덱스 후보) |
+| 라우트·메뉴 | 도메인 경계(→ 모듈 후보) |
+| API 스펙 (OpenAPI/GraphQL) | 리소스=테이블 후보, 중첩 경로(`/orders/{id}/items` → FK) |
+| 백엔드 DTO·서비스 | 저장·조회 필드, 조인, 트랜잭션 묶음 |
 
-절차:
-1. 엔티티 후보 목록을 먼저 보여 준다: `엔티티 | 근거 파일 | 추정 근거`. 사용자가 빼거나 합칠 것을 확인한다.
-2. 엔티티별 컬럼을 추출하고, **확실하지 않은 값은 note 에 `[추정]` 을 붙인다** (타입, 길이, null 여부, 관계 방향).
-3. 관계(1:N, N:M)를 정리하고 N:M 은 조인 테이블로 만든다.
-4. 추가로 필요한 공통 컬럼(id, created_at 등)은 프로젝트 관례를 따른다.
-5. 결과 DBML 을 모듈 파일로 저장 → `make erd P=<단위>` → 생성된 문서 경로와 `[추정]` 항목 목록을 보고하고, 사용자와 하나씩 확정한다(`/erd:design` 대화로 이어도 됨).
+1. 엔티티 후보 표 `엔티티 | 근거 파일 | 근거` → 사용자가 빼거나 합칠 것 확인.
+2. 컬럼 추출 (불확실 → `[추정]`), 관계 정리, N:M 은 조인 테이블.
+3. 공통 컬럼(id, created_at 등)은 프로젝트 관례를 따른다.
 
-### D. docs — 기존 ERD·ADR·기획 문서
-1. 문서 형식별로 읽는다: Markdown/텍스트 표, 이미지 ERD(이미지면 내용을 읽어 옮김), ERDCloud·dbdiagram 내보내기(SQL/DBML 이면 `sql2dbml`), 엑셀 테이블 정의서.
-2. ADR 은 스키마에 영향을 주는 **결정**(예: 소프트 삭제 채택, 멀티테넌트 방식, ID 전략)을 뽑아 DBML 의 Project Note 또는 해당 테이블 Note 에 `ADR-xxx` 로 참조를 남긴다.
-3. 문서끼리, 또는 문서와 코드가 다르면 임의로 고르지 말고 차이 목록을 보여 주고 결정을 받는다.
-4. 이관 후 원 문서에는 "DBML(db/modules)로 이관됨" 표시를 제안한다(수정은 사용자 승인 후).
+### docs
+1. 형식별로 읽는다: Markdown/텍스트 표, 이미지 ERD(내용을 읽어 옮김), SQL/DBML 내보내기(`sql2dbml` — 읽기 전용 변환이라 R1 예외), 엑셀 테이블 정의서.
+2. ADR 은 스키마에 영향을 주는 **결정**(소프트 삭제, 멀티테넌트, ID 전략)을 뽑아 Project/테이블 Note 에 `ADR-xxx` 참조.
+3. 이관 후 원 문서에 "DBML(db/modules)로 이관됨" 표시를 제안 (수정은 승인 후).
 
-## 모듈 분할
-- 테이블을 업무 도메인별로 묶어 `db/modules/<모듈>.dbml` 로 저장 (`dbml-conventions.md`).
-- 모듈 경계 근거: 라우트/패키지 구조, 테이블 접두사, FK 밀집도. 제안 후 사용자 확인.
-- `db/schema.dbml` 에 `use` 추가, `.tbls.yml` 에 viewpoint 추가 (모듈 id = 파일명).
+### augment
+1. 기존 `db/modules/*.dbml` 과 `docs/schema/schema.json` 을 먼저 읽는다 (0단계: 선행 산출물 확인).
+2. 새 소스에서 필요한 데이터를 code 모드 방식으로 추출하되, **추가분만** 정리한다.
+3. 기존 테이블과 매칭: 같은 개념이면 컬럼 추가, 새 개념이면 새 테이블, 애매하면 질문.
+4. 변경 전/후 diff 로 제안 → 확인 후 반영. 기존 테이블·컬럼 이름 변경은 하지 않는다 (필요하면 별도 제안).
 
-## 마무리
-1. `make erd P=<단위>` 실행 (ERD_SOURCE=dbml). 실패하면 `dbml-error.log`/오류 메시지를 보고 DBML 을 고친다.
-2. lint 경고를 정리해 보고: 자동으로 고칠 수 있는 것(note 누락 등)은 고칠지 묻는다.
-3. 보고: 만든 파일, 테이블 수, 모듈 목록, `[추정]` 항목 수, 확인이 필요한 결정 사항.
+## 3단계: 모듈 분할·저장·문서화
+- 테이블을 업무 도메인별로 `db/modules/<모듈>.dbml` 에 저장 (`dbml-conventions.md`, 규모 감각 참고). 경계 근거(라우트·패키지·FK 밀집도)를 제안하고 확인.
+- `db/schema.dbml` 에 `use * from './modules/<모듈>'`, `.tbls.yml` viewpoints 에 모듈 추가 (id = 파일명).
+- `make erd P=<단위>` → 실패 시 `ERD_EXIT` 대응 → lint 경고 중 자동 수정 가능한 것(note 누락)은 고칠지 묻는다.
+
+## 판단 규칙
+| 조건 | 결과 |
+|---|---|
+| 코드에 타입·제약이 명시됨 (엔티티 어노테이션, 마이그레이션) | 확정값 |
+| 화면·DTO 에서만 추론 | `[추정]` |
+| 출처 간 불일치 | 확정하지 않고 차이 목록으로 질문 |
+| 다른 DB 소속으로 보임 | 이 단위에서 제외, "다른 단위 후보" 보고 |
+
+## 에러 처리
+`references/errors.md` (`ERD_EXIT` 코드별) + 아래.
+| 상황 | 동작 |
+|---|---|
+| `db2dbml` 접속 실패 | 접속 정보 확인 요청, 추정으로 진행 금지 |
+| 이미지 ERD 가 판독 불가 | 판독 못 한 부분을 목록으로 알리고 `[TBD]` |
+
+## 체크리스트 (보고 전)
+- [ ] `make erd P=<단위>` ✔ (또는 실패 코드 보고)
+- [ ] 모든 테이블이 모듈(viewpoint)에 속함
+- [ ] `[추정]` / `[TBD]` 목록을 보고에 포함
+- [ ] 출처 간 차이는 결정을 받았거나 미결로 표시
+- [ ] 보고는 `report-templates.md` 3번 양식
+
+## 관련 스킬
+- `/erd:design` — `[추정]`·`[TBD]` 를 대화로 확정, 이후 기능 추가 설계
+- `/erd:review` — 가져온 스키마를 코드와 대조 검토
+- `/erd:sync` — 이후 문서 유지·CI
