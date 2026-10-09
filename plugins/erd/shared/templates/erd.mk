@@ -7,18 +7,25 @@
 #   make erd-sql   [P=..]  : DBML → SQL 만 생성
 #   make erd-list          : ERD 단위 목록
 #   make erd-view  [P=..]  : 터미널에서 문서 보기 (glow)
+#   make erd-check-changed [BASE=origin/main] : 기준 브랜치 대비 스키마가 바뀐 단위만 검사 (PR·CI용)
 # 기존 DB 서버 사용: make erd PG=postgres://user:pass@localhost:5432  (MySQL: MY=mysql://...)
 
 ERD_SCRIPT := scripts/erd-doc.sh
 ERD_UNITS = $(if $(P),$(P),$(patsubst %/erd.env,%,$(shell find . -name erd.env -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/vendor/*' -not -path '*/.venv/*' | sort)))
 
-.PHONY: erd erd-check erd-sql erd-list erd-view
+.PHONY: erd erd-check erd-check-changed erd-sql erd-list erd-view
 
 erd:
 	@set -e; for u in $(ERD_UNITS); do PG=$(PG) MY=$(MY) $(ERD_SCRIPT) doc $$u; echo; done
 
 erd-check:
 	@rc=0; for u in $(ERD_UNITS); do PG=$(PG) MY=$(MY) $(ERD_SCRIPT) check $$u || rc=1; echo; done; exit $$rc
+
+# 스키마 관련 파일이 바뀐 단위 = 기준 대비 커밋 변경 + 커밋 안 한 변경 + 새 파일 (scripts/erd-changed.sh)
+erd-check-changed:
+	@units="$$(scripts/erd-changed.sh --names $(if $(BASE),--base $(BASE)))" || exit $$?; \
+	if [ -z "$$units" ]; then echo "스키마가 바뀐 ERD 단위 없음"; exit 0; fi; \
+	rc=0; for u in $$units; do PG=$(PG) MY=$(MY) $(ERD_SCRIPT) check $$u || rc=1; echo; done; exit $$rc
 
 erd-sql:
 	@set -e; for u in $(ERD_UNITS); do $(ERD_SCRIPT) sql $$u; done
