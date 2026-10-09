@@ -1,55 +1,55 @@
-# ERD 검토 체크리스트와 심각도 판단표
+# ERD review checklist and severity decision table
 
-> 기준: erd 플러그인 0.3.0 — 2026-10. 출력 양식은 `report-templates.md` 의 "검수 리포트".
-> 원칙: **코드·문서 근거가 있는 항목만** 보고한다. 모델링 일반론(정규화 설명 등)은 쓰지 않는다.
-> 근거를 찾지 못한 의심 사항은 "확인 필요"로 따로 둔다.
+> Baseline: erd plugin 0.4.0 — 2026-10. Output format: `report-templates.md` §1 (Review report).
+> Principle: report **only items backed by code or documents**. Do not write generic modeling advice (explanations of normalization, etc.).
+> Suspicions with no evidence found go separately under "Needs confirmation".
 
-## 1단계: 핵심 위반 먼저 (항상 검사)
+## Step 1: core violations first (always checked)
 
-| ID | 항목 | 확인 방법 |
+| ID | Item | How to check |
 |---|---|---|
-| C1 | PK 없는 테이블 | `schema.json` 의 constraints |
-| C2 | 다른 테이블 id 를 저장하는데 FK 없음 | 컬럼명 `*_id` + 코드의 조인·조회 |
-| C3 | 코드가 필수로 다루는 값이 nullable | 엔티티 `nullable=False`/`@NotNull`/필수 폼 필드 ↔ 컬럼 |
-| C4 | 업무상 유일한 값에 UNIQUE 없음 | 코드의 중복 검사 로직(`exists by email` 등) ↔ 제약 |
-| C5 | 코드 ↔ 스키마 불일치 (없는 컬럼 사용, 타입·길이 불일치) | 엔티티·DTO·쿼리 ↔ 컬럼 |
+| C1 | Table without a PK | constraints in `schema.json` |
+| C2 | Stores another table's id but has no FK | column name `*_id` + joins/lookups in code |
+| C3 | A value the code treats as required is nullable | entity `nullable=False`/`@NotNull`/required form field ↔ column |
+| C4 | A business-unique value has no UNIQUE | duplicate-check logic in code (`exists by email`, etc.) ↔ constraint |
+| C5 | Code ↔ schema mismatch (uses a nonexistent column, type/length mismatch) | entities, DTOs, queries ↔ columns |
 
-## 2단계: 나머지 체크리스트
+## Step 2: rest of the checklist
 
-| ID | 분류 | 항목 |
+| ID | Category | Item |
 |---|---|---|
-| P1 | 성능 | FK 컬럼 인덱스 (lint `requireForeignKeyIndex`) |
-| P2 | 성능 | 목록 화면·쿼리의 WHERE/ORDER BY 조합에 맞는 복합 인덱스 |
-| P3 | 성능 | 목록 조회 테이블의 큰 TEXT/JSON 컬럼 |
-| M1 | 모델링 | 같은 값의 중복 저장 (의도된 비정규화면 note 에 이유) |
-| M2 | 모델링 | N:M 관계의 조인 테이블 |
-| M3 | 모델링 | 금액 부동소수점, 시간대 없는 시각 (PostgreSQL) |
-| M4 | 모델링 | 소프트 삭제(`deleted_at`) + UNIQUE 충돌 |
-| M5 | 모델링 | 다중 테넌트 키 누락 |
-| D1 | 삭제 정책 | FK `delete:` 동작이 업무 규칙과 맞는지 |
-| D2 | 상태값 | 허용값이 note/check 로 명시됐는지 |
-| N1 | 명명·문서 | 명명 규칙 일관성 (프로젝트 기존 규칙 우선) |
-| N2 | 명명·문서 | 테이블 Note / 컬럼 note 누락 (lint) |
-| N3 | 명명·문서 | 모듈(viewpoint) 소속 |
-| A1 | 결정 문서 | ADR·설계 문서의 결정과 스키마 불일치 |
-| X1 | 단위 간 | 다른 DB 참조 컬럼(note `→ <단위>:`)의 타입·의미 불일치 |
-| U1 | 정리 | 코드에서 더 이상 쓰지 않는 컬럼·테이블 (삭제 후보 — 사용자 확인) |
+| P1 | Performance | Index on FK columns (lint `requireForeignKeyIndex`) |
+| P2 | Performance | Composite index matching the WHERE/ORDER BY combinations of list screens and queries |
+| P3 | Performance | Large TEXT/JSON columns in tables used for list queries |
+| M1 | Modeling | Same value stored redundantly (if intentional denormalization, give the reason in the note) |
+| M2 | Modeling | Join table for N:M relationships |
+| M3 | Modeling | Floating point for money, timestamps without time zone (PostgreSQL) |
+| M4 | Modeling | Soft delete (`deleted_at`) + UNIQUE conflict |
+| M5 | Modeling | Missing multi-tenant key |
+| D1 | Delete policy | Whether the FK `delete:` behavior matches business rules |
+| D2 | Status values | Whether allowed values are stated in a note/check |
+| N1 | Naming & docs | Consistent naming conventions (the project's existing conventions take precedence) |
+| N2 | Naming & docs | Missing table Note / column note (lint) |
+| N3 | Naming & docs | Module (viewpoint) membership |
+| A1 | Decision docs | Schema contradicts decisions in ADRs/design docs |
+| X1 | Cross-unit | Type/meaning mismatch in columns referencing another DB (note `→ <unit>:`) |
+| U1 | Cleanup | Columns/tables no longer used by code (deletion candidates — confirm with the user) |
 
-## 심각도 판단표 (조건 → 심각도)
+## Severity decision table (condition → severity)
 
-위에서부터 처음 맞는 줄을 적용한다. 판단이 흔들리면 표를 고치고, 즉석에서 다른 기준을 쓰지 않는다.
+Apply the first matching row from the top. If a judgment wavers, fix the table; do not improvise other criteria.
 
-| 조건 | 심각도 |
+| Condition | Severity |
 |---|---|
-| C1, C2 이고 코드가 그 관계를 실제로 사용 | 🚨 **Critical** |
-| C3, C4 이고 코드에 해당 검증·중복 검사 로직이 있음 (DB 가 마지막 방어선이 아님) | 🚨 **Critical** |
-| C5 (코드가 없는 컬럼·다른 타입을 사용 → 런타임 오류 가능) | 🚨 **Critical** |
-| M3 금액 부동소수점, M4 유니크 충돌, X1 타입 불일치 | 🚨 **Critical** |
-| C2·C3·C4 인데 코드 사용 근거가 약함 | ⚠️ **Warning** |
-| P1, P2 (데이터가 늘면 문제가 되는 성능) | ⚠️ **Warning** |
+| C1, C2 and the code actually uses that relationship | 🚨 **Critical** |
+| C3, C4 and the code has the corresponding validation/duplicate-check logic (the DB is not the last line of defense) | 🚨 **Critical** |
+| C5 (code uses a nonexistent column or a different type → possible runtime error) | 🚨 **Critical** |
+| M3 floating-point money, M4 unique conflict, X1 type mismatch | 🚨 **Critical** |
+| C2·C3·C4 but weak evidence of use in code | ⚠️ **Warning** |
+| P1, P2 (performance that becomes a problem as data grows) | ⚠️ **Warning** |
 | D1, D2, M1, M2, M5, A1 | ⚠️ **Warning** |
 | N1, N2, N3, P3, U1 | 💡 **Info** |
-| 근거 부족 | 🔎 **확인 필요** (심각도 없음) |
+| Insufficient evidence | 🔎 **Needs confirmation** (no severity) |
 
-운영 데이터가 있는 테이블의 변경 제안에는 마이그레이션 위험(백필, 단계적 NOT NULL, 잠금)을 함께 적는다.
-프로젝트 규칙·ADR 과 충돌하는 제안은 "규칙 변경 제안"으로 구분한다.
+For change proposals on tables holding production data, also state the migration risk (backfill, staged NOT NULL, locking).
+Proposals that conflict with project rules or ADRs are separated out as a "Rule change proposal".

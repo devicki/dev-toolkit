@@ -1,27 +1,29 @@
-# 강제 규칙과 금지 사항 (모든 erd 스킬 공통)
+# Hard rules and Prohibited (shared by all erd skills)
 
-> 기준: erd 플러그인 0.3.1 — 2026-10. 각 스킬의 "강제 규칙" 절은 이 문서를 가리킨다.
-> 규칙마다 **이유(실제로 겪은 문제)**를 붙였다. 이유가 사라지지 않는 한 우회하지 않는다.
+> Baseline: erd plugin 0.4.0 — 2026-10. Each skill's "Hard rules" section points to this document.
+> Every rule carries its **reason (a problem actually encountered)**. Do not work around a rule while its reason still holds.
 
-## 강제 규칙
+## Hard rules
 
-| # | 규칙 | 이유 |
+| # | Rule | Reason |
 |---|---|---|
-| R1 | 문서 생성·검사는 **반드시** 레포 루트에서 `make erd [P=<단위>]` / `make erd-check` (또는 `scripts/erd-doc.sh <모드> <단위>`)로 한다. `tbls`, `dbml2sql`, `psql`, `docker run` 을 즉석에서 조합해 실행하지 않는다. | ① tbls 는 공용 `/tmp/go-graphviz` 권한 문제로 다른 계정에서 panic 난다(스크립트가 개인 TMPDIR 로 회피). ② **dbml2sql 은 문법 오류여도 exit 0** 이라 직접 돌리면 성공으로 착각한다(스크립트가 로그로 판정). ③ 임시 DB 이름·정리·단위별 경로를 스크립트가 일관되게 처리한다. |
-| R2 | 프로젝트 세팅은 **반드시** `install-templates.sh` 로 한다. 템플릿을 `cp`·`sed` 로 손수 복사·치환하지 않는다. | 손작업은 치환 누락, 기존 파일 덮어쓰기, CLAUDE.md 중복 블록을 만든다. 스크립트는 멱등이고 덮어쓰지 않는다. |
-| R3 | 스키마 원본(`erd.env` 의 `ERD_SOURCE`)만 수정한다. `dbml` → `db/modules/*.dbml`, `migrations` → ORM 모델 + 새 마이그레이션. | 원본이 둘이 되면 서로 덮어쓴다 (`source-of-truth.md`). |
-| R4 | 사용자가 확정하기 전에는 원본 파일을 바꾸지 않는다 (제안 → 확인 → 반영). 단, 사용자가 반영까지 명시적으로 요청한 경우는 예외. | 스키마 변경은 코드·데이터 전반에 영향을 준다. |
-| R5 | 결과는 스크립트 출력과 파일 내용에 근거해 보고한다. 실행하지 못했거나 실패했으면 **그 사실과 `ERD_EXIT` 코드를 그대로 알리고**, 성공한 것처럼 요약하지 않는다. | 추정 보고는 사용자를 잘못된 커밋으로 이끈다 (`errors.md`). |
-| R6 | 임시 DB 는 Docker 또는 사용자가 지정한 **개발용** 서버만 쓴다. | `erd-doc.sh` 는 임시 DB 를 만들고 지운다(`DROP DATABASE`). |
-| R7 | 코드에서 확인하지 못한 값은 `[추정]`, 사용자가 아직 정하지 않은 값은 `[TBD]` 를 note 에 달고 진행한다. 끝에 목록으로 보고한다. | 질문 때문에 진행이 막히지 않게 하면서, 확정되지 않은 것을 숨기지 않는다. |
+| R1 | Generate and check docs **only** from the repo root with `make erd [P=<unit>]` / `make erd-check` (or `scripts/erd-doc.sh <mode> <unit>`). Do not improvise by combining `tbls`, `dbml2sql`, `psql`, `docker run` yourself. | ① tbls panics under other accounts because of permissions on the shared `/tmp/go-graphviz` (the script avoids this with a per-user TMPDIR). ② **dbml2sql exits 0 even on syntax errors**, so running it directly looks like success (the script judges by the log). ③ The script handles temporary DB names, cleanup and per-unit paths consistently. |
+| R2 | Set up projects **only** with `install-templates.sh`. Do not copy or substitute templates by hand with `cp`/`sed`. | Manual work causes missed substitutions, overwritten existing files and duplicate CLAUDE.md blocks. The script is idempotent and never overwrites. |
+| R3 | Modify only the schema source of truth (`ERD_SOURCE` in `erd.env`). `dbml` → `db/modules/*.dbml`; `migrations` → ORM models + a new migration. | With two sources of truth they overwrite each other (`source-of-truth.md`). |
+| R4 | Do not change source-of-truth files before the user confirms (propose → confirm → apply). Exception: the user explicitly asked for the change to be applied. | Schema changes affect code and data across the board. |
+| R5 | Report results based on script output and file contents. If something could not run or failed, **state that fact and the `ERD_EXIT` code as-is**; never summarize it as if it succeeded. | Guessed reports lead the user into wrong commits (`errors.md`). |
+| R6 | Use only Docker or a **development** server the user designated for the temporary DB. | `erd-doc.sh` creates and drops the temporary DB (`DROP DATABASE`). |
+| R7 | Mark values not verified in code with the inferred marker `[inferred]` (`[추정]` in ko) and values the user has not decided yet with `[TBD]` in the note, and keep going. List them at the end of the report. | Keeps questions from blocking progress without hiding what is unconfirmed. |
+| R8 | Language. (a) Conversation and reports use the language of the user's latest message; report-template headings are rendered in that language (Korean labels: `report-templates.md`). (b) Everything written into the project — DBML notes, `.tbls.yml` comments, CLAUDE.md/AGENTS.md text, proposal files, migration comments, the inferred marker — uses `ERD_LANG` from the unit's `erd.env` (`ko`\|`en`). If unset, follow the language of the existing project docs (README, CLAUDE.md) and ask once if unclear. (c) Identifiers (table/column/index names, viewpoint ids, file names) are always English snake_case regardless of language. | 0.3.x wrote Korean into every project; English-speaking teammates and agents could not read generated files, and mixed-language notes confuse both. |
 
-## 금지 사항
+## Prohibited
 
-- ❌ `docs/schema/`, `db/schema.sql`, `db/schema.generated.dbml` 직접 수정 (생성물 — 다음 `make erd` 에서 덮어써짐). `migrations` 단위의 설명·ADR 참조는 `.tbls.yml` `comments:` 에 쓴다
-- ❌ 운영 DB 주소를 `PG=`, `MY=`, `ERD_MIGRATE_CMD`, `tbls` 인자에 넣기
-- ❌ 이미 적용된(커밋·배포된) 마이그레이션 파일 수정 — 새 마이그레이션을 추가한다
-- ❌ `dbml-error.log` 커밋 (`.gitignore` 에 있음)
-- ❌ 다른 ERD 단위(다른 DB)의 테이블에 DBML `ref` 걸기 — note 로 표시 (`units.md`)
-- ❌ 테이블·컬럼 이름 변경을 단순 수정처럼 처리 — 운영 데이터가 있으면 rename 마이그레이션 전략과 영향 코드(grep)를 함께 제시
-- ❌ 요구되지 않은 테이블·컬럼을 "나중을 위해" 추가 — 필요해 보이면 제안만
-- ❌ 이 플러그인의 스크립트가 있는데 비슷한 범용 도구(다른 ERD 스킬, 즉석 스크립트)로 대체
+- ❌ Editing `docs/schema/`, `db/schema.sql`, `db/schema.generated.dbml` directly (generated files — overwritten by the next `make erd`). For a `migrations` unit, descriptions and ADR references go in `.tbls.yml` `comments:`
+- ❌ Putting a production DB address in `PG=`, `MY=`, `ERD_MIGRATE_CMD` or `tbls` arguments
+- ❌ Editing a migration file that has already been applied (committed/deployed) — add a new migration instead
+- ❌ Committing `dbml-error.log` (it is in `.gitignore`)
+- ❌ Adding a DBML `ref` to a table in another ERD unit (another DB) — mark it with a note instead (`units.md`)
+- ❌ Treating a table/column rename as a simple edit — if production data exists, present a rename migration strategy together with the affected code (grep)
+- ❌ Adding tables/columns nobody asked for "for later" — if one seems needed, only propose it
+- ❌ Substituting a similar general-purpose tool (another ERD skill, an ad-hoc script) when this plugin's script exists
+- ❌ Writing project files in a language other than the unit's `ERD_LANG` (R8)

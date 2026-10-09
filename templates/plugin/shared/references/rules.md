@@ -1,15 +1,16 @@
-# 강제 규칙과 금지 사항 (모든 __NAME__ 스킬 공통)
+# Hard rules and prohibitions (shared by all __NAME__ skills)
 
-> 기준: __NAME__ 플러그인 0.1.0 — <YYYY-MM>. 규칙마다 **이유(실제로 겪은 문제)**를 적는다.
+> Baseline: __NAME__ plugin 0.1.0 — <YYYY-MM>. Every rule states its **reason (a problem actually encountered)**.
 
-## 강제 규칙
+## Hard rules
 
-| # | 규칙 | 이유 |
+| # | Rule | Reason |
 |---|---|---|
-| R1 | <결정적 작업>은 **반드시** `${CLAUDE_PLUGIN_ROOT}/shared/scripts/<helper>` 로 한다. 즉석 코드 금지. | <실패 사례> |
-| R2 | 실행하지 못했거나 실패했으면 그 사실과 종료 코드를 그대로 보고한다. 추정 금지. | |
+| R1 | <Deterministic work> **must** go through `${CLAUDE_PLUGIN_ROOT}/shared/scripts/<helper>`. No ad-hoc code. | <failure case> |
+| R2 | If something could not be run or failed, report that fact and the exit code as-is. No guessing. | |
+| R3 | Language: reply in the user's language; files written into the user's project follow the project's language setting. | Writing project files in a language the team does not use leaves teammates and agents unable to read them, and mixed-language text confuses both. |
 
-## 금지 사항
+## Prohibited
 
-- ❌ <생성물 직접 수정>
-- ❌ <위험한 대상(운영 DB 등)에 실행>
+- ❌ <Editing generated files directly>
+- ❌ <Running against dangerous targets (e.g. a production DB)>

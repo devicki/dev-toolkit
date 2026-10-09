@@ -1,69 +1,110 @@
-# 보고 양식 (고정)
+# Report templates (fixed)
 
-> 기준: erd 플러그인 0.3.0 — 2026-10. 형식을 바꾸지 않는다. `{}` 는 자리표시자.
-> 모든 보고 끝에 **데이터 기준** 줄을 붙인다: 커밋(`git rev-parse --short HEAD`, 커밋 안 한 변경이 있으면 `+dirty`)과 `docs/schema` 생성 시각.
+> Baseline: erd plugin 0.4.0 — 2026-10. Do not change the format. `{}` are placeholders.
+> Templates are rendered in the user's language (R8): headings and labels follow the language of the user's latest message. For Korean, use the "Korean labels" table at the end so the output stays identical to 0.3.x.
+> Every report ends with a **Data as of** line: the commit (`git rev-parse --short HEAD`, plus `+dirty` if there are uncommitted changes) and the `docs/schema` generation time.
 
-## 1. 검수 리포트 — `/erd:review`
+## §1 Review report — /erd:review
 
 ```markdown
-# 🔍 ERD 검수 리포트 — {단위} {범위: 전체 | 모듈 | 테이블 | 변경분(기준 ref)}
-**대상**: {단위} ({DB}, ERD_SOURCE={값})  **검사일**: {YYYY-MM-DD}  **통과/검사 항목**: {n}/{m}
-**요약**: 🚨 {c} · ⚠️ {w} · 💡 {i} · 🔎 {q}
+# 🔍 ERD review report — {unit} {scope: all | module | table | changes (base ref)}
+**Target**: {unit} ({DB}, ERD_SOURCE={value})  **Checked on**: {YYYY-MM-DD}  **Passed/checked**: {n}/{m}
+**Summary**: 🚨 {c} · ⚠️ {w} · 💡 {i} · 🔎 {q}
 
-## 🚨 Critical (수정 필수)
-### [{ID}] {테이블.컬럼} — {한 줄 설명}
-- 근거: `{파일}:{줄}` {무엇을 하는 코드인지}
-- 제안:
+## 🚨 Critical (must fix)
+### [{ID}] {table.column} — {one-line description}
+- Evidence: `{file}:{line}` {what the code does}
+- Suggestion:
   ```dbml
-  {변경 후 DBML}
+  {DBML after the change}
   ```
-- 영향: {마이그레이션 위험 / 영향 코드}
+- Impact: {migration risk / affected code}
 
-## ⚠️ Warning (권장 수정)
-(같은 형식)
+## ⚠️ Warning (should fix)
+(same format)
 
 ## 💡 Info
-- [{ID}] {한 줄}
+- [{ID}] {one line}
 
-## 🔎 확인 필요
-- {무엇을 확인 못 했는지, 누구에게 무엇을 물어야 하는지}
+## 🔎 Needs confirmation
+- {what could not be confirmed, whom to ask and what}
 
-## 코드 수정 제안
-- `{파일}:{줄}` {DB 제약보다 느슨한 검증 등}
+## Code change suggestions
+- `{file}:{line}` {validation looser than the DB constraint, etc.}
 
-## ✅ 통과
-- {핵심 위반 C1~C5 중 통과한 항목}
+## ✅ Passed
+- {items among core violations C1–C5 that passed}
 
-## 다음 단계
-- {반영할 항목 번호를 고르면 /erd:design 방식으로 반영 | 담당자 확인}
+## Next steps
+- {pick item numbers to apply them the /erd:design way | confirm with the owner}
 
-데이터 기준: {커밋} · docs/schema {생성 시각}
+Data as of: {commit} · docs/schema {generated at}
 ```
 
-## 2. 차이 점검 리포트 — `/erd:sync drift`
+## §2 Drift report — /erd:sync drift
 
 ```markdown
-# 🔀 스키마 차이 점검 — {단위}
-**비교**: {원본} ↔ {비교 대상}  **검사일**: {YYYY-MM-DD}  **차이**: {n}건
+# 🔀 Schema drift report — {unit}
+**Compared**: {source of truth} ↔ {compared target}  **Checked on**: {YYYY-MM-DD}  **Differences**: {n}
 
-| 항목 | 원본 쪽 | 비교 대상 쪽 | 조치 제안 |
+| Item | Source-of-truth side | Compared side | Suggested action |
 |---|---|---|---|
-| {테이블.컬럼} | {값} | {값} | {어느 쪽을 맞출지 제안 — 결정은 사용자} |
+| {table.column} | {value} | {value} | {which side to align — the user decides} |
 
-## 다음 단계
-- {make erd / 마이그레이션 추가 / 원본 수정 — 사용자 결정 필요 항목}
+## Next steps
+- {make erd / add a migration / fix the source of truth — items needing the user's decision}
 
-데이터 기준: {커밋} · docs/schema {생성 시각}
+Data as of: {commit} · docs/schema {generated at}
 ```
 
-## 3. 작업 마무리 보고 — `/erd:design`, `/erd:import`, `/erd:init`
+## §3 Completion report — /erd:design, /erd:import, /erd:init
 
 ```markdown
-**대상**: {단위} ({DB}, ERD_SOURCE={값})
-**변경**: {테이블 n개 추가 · 컬럼 m개 변경 …}
-**수정한 파일**: `{파일}` …
-**문서**: `{단위}/docs/schema/viewpoint-{모듈}.md` (make erd: ✔ | ✘ ERD_EXIT={코드})
-**lint**: {경고 n건 — 요약 | 없음}
-**[추정] / [TBD]**: {목록 | 없음}
-**다음 단계**: {명령 1~2개}
+**Target**: {unit} ({DB}, ERD_SOURCE={value})
+**Changes**: {n tables added · m columns changed …}
+**Files changed**: `{file}` …
+**Docs**: `{unit}/docs/schema/viewpoint-{module}.md` (make erd: ✔ | ✘ ERD_EXIT={code})
+**lint**: {n warnings — summary | none}
+**[inferred] / [TBD]**: {list | none}
+**Next steps**: {1–2 commands}
 ```
+
+## Korean labels
+
+When the user writes in Korean, replace each fixed heading/label with the Korean below (as used in 0.3.x). Placeholder contents are written in Korean too.
+
+| English | Korean |
+|---|---|
+| `🔍 ERD review report` (§1 title) | `🔍 ERD 검수 리포트` |
+| scope `all \| module \| table \| changes (base ref)` | `전체 \| 모듈 \| 테이블 \| 변경분(기준 ref)` |
+| `Target` | `대상` |
+| `Checked on` | `검사일` |
+| `Passed/checked` | `통과/검사 항목` |
+| `Summary` | `요약` |
+| `🚨 Critical (must fix)` | `🚨 Critical (수정 필수)` |
+| `Evidence` | `근거` |
+| `Suggestion` | `제안` |
+| `Impact` | `영향` |
+| `⚠️ Warning (should fix)` | `⚠️ Warning (권장 수정)` |
+| `(same format)` | `(같은 형식)` |
+| `💡 Info` | `💡 Info` |
+| `🔎 Needs confirmation` | `🔎 확인 필요` |
+| `Code change suggestions` | `코드 수정 제안` |
+| `✅ Passed` | `✅ 통과` |
+| `Next steps` | `다음 단계` |
+| `Data as of` | `데이터 기준` |
+| `{generated at}` (in the Data as of line) | `{생성 시각}` |
+| `🔀 Schema drift report` (§2 title) | `🔀 스키마 차이 점검` |
+| `Compared` | `비교` |
+| `Differences`: `{n}` | `차이`: `{n}건` |
+| table header `Item \| Source-of-truth side \| Compared side \| Suggested action` | `항목 \| 원본 쪽 \| 비교 대상 쪽 \| 조치 제안` |
+| `Changes` | `변경` |
+| `Files changed` | `수정한 파일` |
+| `Docs` | `문서` |
+| `lint`: `{n warnings — summary \| none}` | `lint`: `{경고 n건 — 요약 \| 없음}` |
+| `[inferred] / [TBD]` | `[추정] / [TBD]` |
+| `none` | `없음` |
+| Review report (§1 name) | 검수 리포트 |
+| Drift report (§2 name) | 차이 점검 리포트 |
+| Completion report (§3 name) | 작업 마무리 보고 |
+| Rule change proposal | 규칙 변경 제안 |

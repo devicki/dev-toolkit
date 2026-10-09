@@ -1,98 +1,102 @@
 ---
 name: init
 description: >
-  프로젝트(단일·모노레포)에 ERD 관리 구조 세팅: ERD 단위·스키마 원본 결정 후 템플릿 설치. 산출물: erd.env, .tbls.yml, erd.mk, scripts/erd-*.sh.
-  트리거: "ERD 세팅", "erd 초기화", "ERD 관리 도입" / "set up erd".
-  비활성: erd.env 가 이미 있는 단위의 설계(→ design)·문서 갱신(→ sync).
-argument-hint: "[--project <단위 폴더>]"
+  Set up ERD management (single/monorepo): decide units, source of truth, language; install templates. Output: erd.env, .tbls.yml, erd.mk, scripts.
+  Triggers: "ERD 세팅", "ERD 관리 도입" / "set up erd", "init erd".
+  Not for: units with erd.env (→ /erd:design, /erd:sync).
+argument-hint: "[--project <unit folder>] [--lang <ko|en>]"
 allowed-tools:
   - "Bash(bash ${CLAUDE_PLUGIN_ROOT}/shared/scripts/*)"
 ---
 
-# /erd:init — ERD 관리 구조 세팅
+# /erd:init — set up ERD management
 
-> **한 줄 정의**: 어디가 ERD 단위이고 무엇이 원본인지 정한 뒤, 스크립트로 파일을 설치한다. 테이블 설계는 하지 않는다(→ design/import).
-> **핵심 산출물**: 단위마다 `erd.env`·`.tbls.yml`(·`db/`), 루트에 `erd.mk`·`scripts/erd-doc.sh`·`scripts/erd-changed.sh`
+> **One-line definition**: decide which folders are ERD units and what their source of truth is, then install the files with the script. No table design here (→ design/import).
+> **Key outputs**: per unit `erd.env`·`.tbls.yml`(·`db/`); at the repo root `erd.mk`·`scripts/erd-doc.sh`·`scripts/erd-changed.sh`
 
-## 스킬 파일 (`${CLAUDE_PLUGIN_ROOT}/shared/`)
-- `scripts/find-units.sh [--json]` — 레포 구조·기존 단위·후보 (아래에 자동 실행 결과)
-- `scripts/detect-project.sh <단위>` — 단위별 DB 종류·ORM·참고 자산
-- `scripts/install-templates.sh` — **설치 필수 헬퍼** (멱등, 덮어쓰지 않음, CLAUDE.md 마커 블록)
-- `scripts/check-tools.sh` — 도구 점검
-- `references/units.md` — 단위 개념·모노레포 유형 판별
-- `references/source-of-truth.md` — 원본 결정표
-- `references/migration-tools.md` — 도구별 `ERD_MIGRATE_CMD`
-- `references/rules.md` — 강제 규칙·금지
+## Skill files (`${CLAUDE_PLUGIN_ROOT}/shared/`)
+- `scripts/find-units.sh [--json]` — repo layout, existing units, candidates (automatic run result below)
+- `scripts/detect-project.sh <unit>` — per-unit DB type, ORM, reference assets
+- `scripts/install-templates.sh` — **mandatory install helper** (idempotent, never overwrites, CLAUDE.md marker block)
+- `scripts/check-tools.sh` — tool check
+- `references/units.md` — unit concept, monorepo layout types
+- `references/source-of-truth.md` — source-of-truth Decision table
+- `references/migration-tools.md` — `ERD_MIGRATE_CMD` per tool
+- `references/rules.md` — Hard rules, Prohibited
 
-## 현재 레포 (자동 탐색 결과)
+## Current repo (automatic scan result)
 
 !`bash ${CLAUDE_PLUGIN_ROOT}/shared/scripts/find-units.sh || true`
 
-## 강제 규칙 (최우선) — 전체는 `rules.md`
-1. 파일 설치는 **반드시** `install-templates.sh` 로 한다. `cp`·`sed` 로 템플릿을 손수 다루지 않는다 (R2).
-2. 단위 배치와 `ERD_SOURCE` 는 **제안 후 사용자 확인**을 받아 확정한다 (R4).
-3. 프로젝트 설정(alembic env.py, prisma datasource 등) 수정이 필요하면 제안만 하고 승인 후 수정한다.
+## Hard rules (top priority) — full list in `rules.md`
+1. Install files **only** via `install-templates.sh`. Never handle templates by hand with `cp`/`sed` (R2).
+2. Unit layout, `ERD_SOURCE` and `ERD_LANG` are settled **by proposal, then user confirmation** (R4).
+3. If project settings need changes (alembic env.py, prisma datasource, etc.), only propose them and edit after approval.
+4. Language (R8): reply in the user's language; text written into the project follows the unit's `ERD_LANG`.
 
-## 0단계: 사전 조건
-- `bash ${CLAUDE_PLUGIN_ROOT}/shared/scripts/check-tools.sh` — dbml2sql/tbls 가 없으면 `/erd:doctor` 를 먼저 할지 묻는다 (세팅은 도구 없이도 가능).
-- 위 탐색 결과에 기존 단위가 있으면 그 단위는 다시 세팅하지 않는다. 요약하고 빠진 단위만 추가할지 묻는다.
+## Step 0: prerequisites
+- `bash ${CLAUDE_PLUGIN_ROOT}/shared/scripts/check-tools.sh` — if dbml2sql/tbls are missing, ask whether to run `/erd:doctor` first (setup works without the tools).
+- If the scan above shows existing units, do not set them up again. Summarize them and ask whether to add only the missing units.
+- If an existing unit's `erd.env` has no `ERD_LANG`, propose adding it: decide the language as in step 2, then re-run `install-templates.sh` for that unit with its current arguments plus `--lang` (idempotent — existing files are kept and `ERD_LANG` is added).
 
-## 1단계: 단위 배치 결정
-`units.md` "모노레포 유형 판별"로 제안한다. `--project <폴더>` 가 있으면 그 폴더 하나만.
+## Step 1: decide the unit layout
+Propose using `units.md` "Monorepo layout types". With `--project <folder>`, only that one folder.
 
-| 상황 | 단위 |
+| Situation | Unit |
 |---|---|
-| 단일 레포 | 레포 루트 (`.`) |
-| 공유 DB + 여러 앱 | 스키마를 가진 폴더 하나. 나머지 앱은 `--related` |
-| 서비스별 DB | DB 를 가진 서비스 폴더마다 |
-| 판단 불가 | 탐색 결과를 보여 주고 질문 |
+| Single repo | Repo root (`.`) |
+| Shared DB + several apps | The one folder that owns the schema. Other apps go in `--related` |
+| DB per service | Each service folder that has a DB |
+| Cannot tell | Show the scan result and ask |
 
-제안 예 (확인 받기):
+Example proposal (get confirmation — unit layout, dialect, source and language in this one question batch):
 ```
-ERD 단위 제안
+Proposed ERD units
 - apps/api   PostgreSQL · Alembic → migrations (alembic upgrade head)
-- apps/pay   MySQL · 없음         → dbml
-관련 소스: apps/web → apps/api
+- apps/pay   MySQL · none         → dbml
+Related sources: apps/web → apps/api
+Language (ERD_LANG): en — language of your request; README/CLAUDE.md are English too
 ```
 
-## 2단계: 단위별 원본 결정
-- `bash ${CLAUDE_PLUGIN_ROOT}/shared/scripts/detect-project.sh <단위>` → DB 종류, ORM/마이그레이션, 참고 자산.
-- `source-of-truth.md` 결정표로 `dbml` / `migrations` 제안. DB 종류 단서가 없으면 묻는다.
-- `migrations` 면 `migration-tools.md` 에서 `ERD_MIGRATE_CMD` 를 고른다 (단위 폴더에서 실행, `DATABASE_URL` 로 임시 DB 전달).
+## Step 2: decide the source of truth and language per unit
+- `bash ${CLAUDE_PLUGIN_ROOT}/shared/scripts/detect-project.sh <unit>` → DB type, ORM/migrations, reference assets.
+- Propose `dbml` / `migrations` with the `source-of-truth.md` Decision table. If there is no hint of the DB type, ask.
+- For `migrations`, pick `ERD_MIGRATE_CMD` from `migration-tools.md` (runs in the unit folder; the temporary DB is passed via `DATABASE_URL`).
+- Decide `ERD_LANG` (`ko`|`en`) — the language of everything written into the project (R8). Default: the language of the user's request. If the existing README/CLAUDE.md/AGENTS.md are predominantly in the other language, propose that instead. `--lang` given → use it. Confirm it in the same question batch as dialect/source (step 1 example); never add an extra round just for the language.
 
-## 3단계: 설치 — 헬퍼 실행
-단위마다 (레포 루트에서):
+## Step 3: install — run the helper
+For each unit (from the repo root):
 ```bash
 bash ${CLAUDE_PLUGIN_ROOT}/shared/scripts/install-templates.sh \
-  --unit <단위> --name <영문 이름> --dialect <postgres|mysql> --source <dbml|migrations> \
-  [--migrate-cmd '<명령>'] [--related '<폴더,폴더>']
+  --unit <unit> --name <English name> --dialect <postgres|mysql> --source <dbml|migrations> \
+  --lang <ko|en> [--migrate-cmd '<command>'] [--related '<folder,folder>']
 ```
-- 출력의 `+`(생성) `=`(유지) `~`(갱신) `!`(확인 필요)를 요약해 보고한다. 마지막 줄이 `INSTALL_RESULT=ok` 가 아니면 `!` 항목을 설명한다.
-- `!` scripts 가 플러그인 버전과 다르면: 로컬 수정이 있는지 `git diff` 로 보고 사용자 확인 후 `--update-scripts` 로 재실행.
-- 먼저 `--dry-run` 으로 보여 주고 확인받아도 된다 (파일이 많은 모노레포 권장).
-- CLAUDE.md(또는 AGENTS.md) 블록은 스크립트가 넣는다. 직접 편집하지 않는다.
+- Summarize the output's `+` (created) `=` (kept) `~` (updated) `!` (needs confirmation) markers in the report. If the last line is not `INSTALL_RESULT=ok`, explain the `!` items.
+- `!` scripts differ from the plugin version: check for local edits with `git diff`, and after user confirmation re-run with `--update-scripts`.
+- You may first show a `--dry-run` and get confirmation (recommended for monorepos with many files).
+- The CLAUDE.md (or AGENTS.md) block is inserted by the script. Do not edit it by hand.
 
-## 4단계: 첫 문서 또는 다음 단계 (단위별)
-| 원본 | 다음 |
+## Step 4: first docs or next step (per unit)
+| Source of truth | Next |
 |---|---|
-| `migrations` | `make erd P=<단위>` → 결과 요약 → 모듈(viewpoints) 구성을 제안해 `.tbls.yml` 에 반영 → 다시 `make erd P=<단위>` |
-| `dbml` + 참고 자산 있음 | `/erd:import --project <단위>` |
-| `dbml` + 자산 없음 | `/erd:design --project <단위>` (대화형 초기 설계). `_example.dbml` 은 첫 모듈 후 삭제 |
+| `migrations` | `make erd P=<unit>` → summarize the result → propose a module (viewpoints) layout and add it to `.tbls.yml` → `make erd P=<unit>` again |
+| `dbml` + reference assets | `/erd:import --project <unit>` |
+| `dbml` + no assets | `/erd:design --project <unit>` (interactive initial design). Delete `_example.dbml` after the first module |
 
-## 에러 처리
-`references/errors.md` + 아래.
-| 상황 | 동작 |
+## Error handling
+`references/errors.md` + below.
+| Situation | Action |
 |---|---|
-| install-templates.sh exit 2 | 인자 오류 메시지대로 수정해 재실행 (이름은 영문·숫자·_·-) |
-| `make erd` 실패 | `ERD_EXIT` 코드로 `errors.md` 대응 |
+| install-templates.sh exit 2 | Fix as the argument error message says and re-run (name: letters, digits, `_`, `-`) |
+| `make erd` fails | Respond per `errors.md` using the `ERD_EXIT` code |
 
-## 체크리스트 (보고 전)
-- [ ] 단위 배치·원본을 사용자가 확인했다
-- [ ] 모든 단위에서 `INSTALL_RESULT=ok` (또는 `!` 항목 설명)
-- [ ] migrations 단위는 `make erd P=<단위>` 를 한 번 돌려 결과를 확인했다
-- [ ] 보고는 `report-templates.md` 3번 양식 (단위 목록·설치 파일·다음 단계)
+## Checklist (before reporting)
+- [ ] The user confirmed the unit layout, source of truth and `ERD_LANG`
+- [ ] `INSTALL_RESULT=ok` for every unit (or the `!` items are explained)
+- [ ] For migrations units, `make erd P=<unit>` was run once and the result checked
+- [ ] The report follows `report-templates.md` §3 (unit list, installed files, next steps)
 
-## 관련 스킬
-- `/erd:doctor` — 도구가 없을 때
-- `/erd:import` — 기존 소스·문서·DB 에서 DBML 만들기
-- `/erd:design` — 대화형 초기 설계
+## Related skills
+- `/erd:doctor` — when tools are missing
+- `/erd:import` — build DBML from existing code, docs or a DB
+- `/erd:design` — interactive initial design

@@ -16,7 +16,7 @@ devicki의 Claude Code 플러그인 모음(마켓플레이스)입니다.
 
 | 플러그인 | 버전 | 설명 |
 |---|---|---|
-| [erd](plugins/erd) | 0.3.1 | DBML(설계 원본) + tbls(문서·ERD·lint)로 프로젝트 ERD를 설계·문서화·유지보수. 모노레포 지원 |
+| [erd](plugins/erd) | 0.4.0 | DBML(설계 원본) + tbls(문서·ERD·lint)로 프로젝트 ERD를 설계·문서화·유지보수. 모노레포 지원 |
 
 ## 플러그인 개발
 

@@ -1,6 +1,6 @@
 {
   "name": "erd",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "DBML(설계 원본) + tbls(문서·ERD·lint)로 프로젝트 ERD를 설계하고 유지보수합니다.",
   "author": {
     "name": "devicki",

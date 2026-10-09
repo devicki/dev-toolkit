@@ -16,6 +16,15 @@ Alembic·Prisma·Flyway 등 기존 마이그레이션 도구가 있는 프로젝
 
 자연어로 요청해도 맞는 스킬이 선택됩니다 (예: "주문 기능에 필요한 테이블 설계해줘"). 스킬 설명에 "쓰지 않을 때"가 적혀 있어 비슷한 요청끼리 서로 가로채지 않습니다.
 
+## 언어 / Language
+
+- 스킬은 사용자가 쓴 언어로 답합니다 (한국어·영어 등). 리포트 양식도 그 언어로.
+- 프로젝트에 남는 파일(ERD_GUIDE, erd.env·.tbls.yml 주석, CLAUDE.md/AGENTS.md 블록, DBML note, `make erd` 메시지)은 단위의 `erd.env` 에 있는 `ERD_LANG=ko|en` 을 따릅니다. `/erd:init` 이 요청 언어와 기존 문서 언어를 보고 제안합니다.
+- 테이블·컬럼 이름은 언어와 무관하게 영어 snake_case.
+- 0.3.x 로 세팅한 프로젝트: `/erd:init` 을 다시 실행하면 `ERD_LANG` 을 추가합니다 (기존 파일 유지).
+
+> **English**: skills reply in the user's language. Files written into the project follow `ERD_LANG=ko|en` in the unit's `erd.env` (proposed by `/erd:init`); identifiers are always English. Skill instructions are maintained in English.
+
 ## make 명령 (레포 루트)
 
 | 명령 | 용도 |
@@ -37,7 +46,7 @@ scripts/erd-changed.sh   # 기준 브랜치 대비 바뀐 단위 탐지
 docs/ERD_GUIDE.md        # 팀원용 작업 규칙
 
 # ERD 단위 폴더 (단일 레포면 루트와 같음)
-erd.env                  # 스키마 원본(dbml|migrations), DB 종류, 마이그레이션 명령, 관련 소스
+erd.env                  # 언어(ERD_LANG), 스키마 원본(dbml|migrations), DB 종류, 마이그레이션 명령, 관련 소스
 .tbls.yml                # 문서 위치, Mermaid ERD, 모듈(viewpoints), lint 규칙
 db/schema.dbml           # (dbml 원본일 때) 진입점
 db/modules/*.dbml        # (dbml 원본일 때) 모듈별 설계
