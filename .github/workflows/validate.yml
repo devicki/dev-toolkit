@@ -1,0 +1,50 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  structure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: 저장소 구조 검증
+        run: |
+          BASE=""
+          if [ -n "${{ github.base_ref }}" ]; then BASE="--base origin/${{ github.base_ref }}"; fi
+          python3 scripts/validate.py $BASE
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: claude plugin validate
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          claude plugin validate .
+
+  erd-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: postgres }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: 도구 설치 (tbls, @dbml/cli, psql)
+        run: |
+          npm install -g @dbml/cli
+          V=1.96.1
+          curl -sSL https://github.com/k1LoW/tbls/releases/download/v$V/tbls_v${V}_linux_amd64.tar.gz | sudo tar xz -C /usr/local/bin tbls
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+      - name: erd 회귀 테스트
+        env:
+          PG: postgres://postgres:postgres@localhost:5432
+        run: plugins/erd/tests/run.sh

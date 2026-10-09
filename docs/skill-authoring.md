@@ -1,0 +1,128 @@
+# 스킬·플러그인 작성 가이드 (dev-toolkit)
+
+> 기준: 2026-10. 사내 마켓플레이스 벤치마킹 문서(HANDOFF)와 erd 플러그인 개발에서 겪은 문제를 합쳐 정리했다.
+> 새 플러그인은 `scripts/new-plugin.sh <이름> --skill <스킬>` 로 시작하고, 이 문서의 규칙을 따른다.
+
+## 0. 저장소 구조
+
+```
+dev-toolkit/
+├── .claude-plugin/marketplace.json   # 플러그인 목록 (name = plugin.json name)
+├── plugins/<plugin>/
+│   ├── .claude-plugin/plugin.json    # 공식 스키마 필드만. 내용이 바뀌면 version 올림
+│   ├── skills/<skill>/SKILL.md       # 절차 (500줄 이하)
+│   ├── shared/scripts/               # 여러 스킬이 쓰는 결정적 헬퍼
+│   ├── shared/references/            # 규칙·참고 (출처·버전·날짜 표기)
+│   ├── shared/templates/             # 사용자 프로젝트에 설치할 파일
+│   ├── tests/run.sh                  # 회귀 테스트 (임시 폴더에서만)
+│   └── README.md, CHANGELOG.md
+├── templates/plugin/                 # new-plugin.sh 가 복사하는 스캐폴드
+├── scripts/validate.py               # 구조 검증 (CI)
+└── docs/skill-authoring.md           # 이 문서
+```
+
+경로 규칙
+
+| 파일 위치 | SKILL.md 에서 | 비고 |
+|---|---|---|
+| 그 스킬만 쓰는 파일 (스킬 폴더 안) | `${CLAUDE_SKILL_DIR}/file` | |
+| 플러그인 공용 (`shared/`) | `${CLAUDE_PLUGIN_ROOT}/shared/...` | 플러그인 스킬에서만 치환 |
+| 루트 상대경로 (`shared/x.sh`) | ❌ | cwd 가 사용자 프로젝트라 "파일 없음" — `validate.py` 가 경고 |
+| 플러그인 밖 (`../`) | ❌ | 설치 캐시에 복사되지 않음 |
+
+## 1. description — 트리거 정확도와 상시 비용
+
+모든 스킬의 description 은 **세션마다 항상** 컨텍스트에 들어간다 (`claude plugin details <플러그인>` 의 Always-on). 짧고 정확하게.
+
+```yaml
+description: >
+  <무엇을 하는지 1문장>. 산출물: <형식>.
+  트리거: "<한국어>", "<한국어>" / "<english>".
+  비활성: <쓰지 않을 때>(→ <대신 쓸 스킬>).
+```
+
+- **비활성 조건이 가장 중요**하다. 같은 플러그인의 스킬끼리 요청을 가로채지 않게 경계를 적는다.
+- 한국어는 토큰이 많이 든다. erd 는 6개 스킬 합계 약 1.1k 토큰을 상한으로 잡았다 (처음 길게 썼을 때 1.8k).
+- 트리거 예시는 명령형("~해줘")과 명사형("~ 검토")을 섞는다.
+
+## 2. SKILL.md 골격
+
+`templates/plugin/skills/__SKILL__/SKILL.md` 순서를 따른다: 한 줄 정의 → **스킬 파일 목록(역할 한 줄씩)** → **강제 규칙** → 0단계 사전 조건 → 1단계 모드 → 단계들 → 판단표 → 에러표 → 체크리스트 → 관련 스킬.
+
+- 모드는 요청에서 분명하면 묻지 않는다. 모호할 때만 한 번.
+- 대화형 수집: 한 번에 한 묶음(1~3개), 필수/선택 구분, 이미 답한 것은 다시 묻지 않음, 모르면 `[TBD]` 로 진행, 단계마다 체크포인트.
+- 선행 산출물(기존 문서·코드)을 질문보다 먼저 읽는다.
+- 끝에 관련 스킬을 적어 다음 단계를 제안하게 한다.
+
+## 3. 결정적 작업은 헬퍼 스크립트로 (가장 효과가 큰 패턴)
+
+- 매번 같아야 하는 작업(파일 설치, 포맷 변환, 검증, 집계)은 스크립트로 만들고 SKILL.md 에서 **사용을 강제**한다. 이유(실제 실패 사례)를 같이 적어야 모델이 우회하지 않는다.
+- **멱등**: 다시 실행해도 결과가 같고 기존 파일을 덮어쓰지 않는다. 사용자 문서에 섹션을 넣을 땐 마커 블록 교체(`shared/scripts/inject-block.sh`).
+- **종료 코드로 실패 유형을 구분**하고 마지막 줄에 기계가 읽을 결과를 찍는다 (예: `ERD_EXIT=4 dbml`, `INSTALL_RESULT=ok`). SKILL.md 의 에러표와 1:1 로 맞춘다.
+- 사람용 출력과 기계용 출력(`--json`)을 나눈다. 스크립트끼리·CI 에서 쓰는 값은 JSON 으로.
+- 출력 기호를 통일한다: `+` 생성 · `=` 그대로 · `~` 갱신 · `!` 확인 필요 · `✘` 실패.
+- 선택 의존성(없어도 되는 도구)은 `command -v` 로 확인하고 **조용히 건너뛴다**.
+
+### 헬퍼 언어
+
+| 상황 | 선택 |
+|---|---|
+| 사용자 프로젝트에 설치되어 CI 에서도 도는 스크립트 | bash (**macOS 기본 bash 3.2 호환**: 연관 배열 금지) |
+| 저장소 개발 도구, JSON 조작이 많은 헬퍼 | Python 표준 라이브러리만 (`scripts/validate.py` 참고) |
+| ❌ bash 와 PowerShell 두 벌 | 기능 차이가 생긴다. Windows 지원이 필요해지면 Python 으로 일원화 |
+
+### Python 헬퍼 뼈대 (외부 API 를 부르는 스킬용)
+- `urllib.request` 만 사용, 기본값은 환경변수로 덮어쓰기 (`BASE = os.environ.get("X_API_BASE", ...)`)
+- 실패 유형별 예외(`Unreachable`, `NotFound`) → 종료 코드 → SKILL.md 에러표
+- TTL 파일 캐시(`~/.cache/<name>/`), `--format json|md`
+- 잘못된 설정은 일찍 거부
+
+## 4. 참고 문서
+
+- SKILL.md 에는 절차만. 규칙·표·예시는 `shared/references/` 로.
+- 맨 위에 **출처·버전·날짜**: `> 기준: tbls 1.96.1 — 2026-10 확인`. 외부 도구 옵션은 버전마다 바뀐다.
+- `rules.md` 에 강제 규칙(이유 포함)과 금지 목록을 모은다. 각 스킬은 "전체는 rules.md" 로 가리킨다.
+- 보고 형식이 중요한 스킬은 `report-templates.md` 에 고정 양식(자리표시자 `{}`)을 둔다. 끝에 "데이터 기준"(커밋·생성 시각).
+
+## 5. 검수(CHECK)형 스킬
+
+- 핵심 위반 N개를 먼저 판정하고 나머지는 체크리스트로.
+- 심각도는 **조건 → 결과 표**로 정한다. 즉석 기준 금지.
+- 리포트: 대상·검사일·통과/총항목 → 🚨 Critical → ⚠️ Warning → 💡 Info → 🔎 확인 필요 → ✅ 통과 → 다음 단계.
+- 모든 지적에 근거 위치(`파일:줄`). 근거가 없으면 "확인 필요".
+- 변경분만 검사하는 모드를 둔다 (원격 기준 브랜치 대비: 커밋 + 미커밋 + 새 파일).
+
+## 6. 여러 서브에이전트를 쓰는 워크플로 스킬 (아직 사용처 없음 — 만들 때 따를 것)
+
+- frontmatter `disable-model-invocation: true` (무거운 워크플로는 사용자가 직접 호출), `argument-hint`, 본문에 `$ARGUMENTS` (비어 있으면 직전 작업을 이어감).
+- 역할표: 역할 / 주체(본 세션·서브에이전트·외부 CLI) / 모델(명시하지 않으면 부모 모델 상속) / 업무.
+- 이름 붙여 띄우고 재사용은 `SendMessage` — 이미 띄운 에이전트를 새로 만들지 않는다. 독립 작업은 한 응답에서 병렬로.
+- 서브에이전트 prompt 에 목적·제약·파일 경로·판단 기준을 빠짐없이 (본 대화를 못 본다).
+- 종료 조건 + 루프 상한(예: 5회) + 수정 후 이전 통과 항목 재검증.
+- 서브에이전트 정의(`agents/*.md`): 작업 범위(커밋된 변경·미커밋·지정 파일), 원격 기준 브랜치, 자동 수정과 판단 필요 구분(판단 필요가 있으면 먼저 묻기), 실행 모드 제약을 맨 위에.
+
+## 7. 테스트
+
+- `plugins/<p>/tests/run.sh`: 임시 폴더에 샘플 프로젝트를 만들어 실행. **실제 레포를 고쳤다 되돌리는 테스트 금지.**
+- 사용자 git 설정의 영향을 끊는다: `GIT_CONFIG_GLOBAL=<임시 파일>` (커밋 서명 등).
+- 외부 자원(DB·Docker)이 없으면 SKIP, 실패와 구분.
+- 테스트마다 timeout 감시를 두고 **stdin 을 닫지 않는다** — 스크립트가 stdin 을 기다리는 버그를 잡는다.
+
+## 8. 실제로 겪은 함정 (erd)
+
+| 함정 | 대응 |
+|---|---|
+| `dbml2sql` 은 문법 오류여도 exit 0, 성공해도 빈 `dbml-error.log` 생성 | 로그 **내용** 유무로 판정 |
+| tbls 가 공용 `/tmp/go-graphviz` 를 써서 다른 계정에서 panic | 스크립트에서 개인 `TMPDIR` 지정, 서버는 `libpam-tmpdir` |
+| `sed <파일>` 처럼 식 없이 호출하면 파일을 스크립트로 읽고 stdin 대기 | 치환이 없으면 `cp` |
+| bash `set -e` 는 `if ( ... )` 조건 안에서 무시됨 | 서브셸을 따로 실행하고 `$?` 확인 |
+| macOS 기본 bash 3.2 에는 연관 배열 없음 | 임시 파일 + awk |
+| `tbls diff` 는 차이가 있으면 exit 1 | 출력 유무로 판정 |
+| 환경변수 파일 값에 공백 → `source` 시 문법 오류 | 작은따옴표 인용 (`'\''` 이스케이프) |
+| 이미 떠 있던 프로세스(IDE 서버, herdr)는 로그인 환경을 다시 읽지 않음 | 환경변수·PAM 변경 후 `loginctl terminate-user` 또는 재로그인 |
+
+## 9. 릴리스
+
+1. 플러그인 `CHANGELOG.md` 에 기록, `plugin.json` 의 `version` 올림 (안 올리면 사용자에게 업데이트가 안 감 — `validate.py --base` 가 경고)
+2. `python3 scripts/validate.py` · `claude plugin validate .` · `plugins/<p>/tests/run.sh`
+3. 푸시 → 사용자: `/plugin marketplace update dev-toolkit` → `/reload-plugins`

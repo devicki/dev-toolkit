@@ -10,16 +10,21 @@ devicki의 Claude Code 플러그인 모음(마켓플레이스)입니다.
 ```
 
 셸에서: `claude plugin marketplace add devicki/dev-toolkit && claude plugin install erd@dev-toolkit`
-업데이트: `/plugin marketplace update dev-toolkit`
+업데이트: `/plugin marketplace update dev-toolkit` 후 열린 세션에서 `/reload-plugins`
 
 ## 플러그인
 
-| 플러그인 | 설명 |
-|---|---|
-| [erd](plugins/erd) | DBML(설계 원본) + tbls(문서·ERD·lint)로 프로젝트 ERD를 설계·문서화·유지보수 |
+| 플러그인 | 버전 | 설명 |
+|---|---|---|
+| [erd](plugins/erd) | 0.3.0 | DBML(설계 원본) + tbls(문서·ERD·lint)로 프로젝트 ERD를 설계·문서화·유지보수. 모노레포 지원 |
 
-## 플러그인 추가하기
+## 플러그인 개발
 
-1. `plugins/<이름>/.claude-plugin/plugin.json` 과 `plugins/<이름>/skills/<스킬>/SKILL.md` 작성
-2. `.claude-plugin/marketplace.json` 의 `plugins` 배열에 항목 추가 (`name` 은 plugin.json 의 name 과 같게)
-3. `claude plugin validate .` 로 검증 후 푸시
+```bash
+scripts/new-plugin.sh <이름> --skill <첫 스킬> --desc "<설명>"   # 스캐폴드 + marketplace 등록
+python3 scripts/validate.py [--base origin/main]                # 구조 검증 (CI 에서도 실행)
+claude plugin validate .                                         # 공식 검증
+plugins/<이름>/tests/run.sh                                      # 플러그인 회귀 테스트
+```
+
+작성 규칙: [docs/skill-authoring.md](docs/skill-authoring.md) · 변경 이력: 각 플러그인의 `CHANGELOG.md`
