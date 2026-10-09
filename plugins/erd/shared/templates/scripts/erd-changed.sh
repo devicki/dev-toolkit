@@ -26,7 +26,7 @@ fi
 MB="$(git merge-base "$BASE" HEAD 2>/dev/null || echo "$BASE")"
 
 FILES="$( { git diff --name-only "$MB" HEAD; git diff --name-only HEAD; git ls-files --others --exclude-standard; } 2>/dev/null | sort -u )"
-UNITS="$(git ls-files --cached --others --exclude-standard 2>/dev/null | grep -E '(^|/)erd\.env$' | sed 's#/\?erd\.env$##; s#^$#.#' | sort -u)"
+UNITS="$(git ls-files --cached --others --exclude-standard 2>/dev/null | grep -E '(^|/)erd\.env$' | sed -E 's#/?erd\.env$##; s#^$#.#' | sort -u)"
 
 unit_of() { # 파일이 속한 가장 깊은 단위
   local f="$1" best="" u

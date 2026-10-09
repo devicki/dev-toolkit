@@ -162,7 +162,7 @@ if [ $DRY = 1 ]; then say "~" "$(agent_file "$U")" "erd:unit 블록 (dry-run)"
 else printf '%s\n' "$UNIT_BLOCK" | bash "$INJECT" "$(agent_file "$U")" erd:unit - | sed "s#$ROOT/##"; fi
 
 # 모노레포(루트가 아닌 단위가 있음)면 루트에 단위 목록 블록
-UNITS="$(find "$ROOT" -name erd.env -not -path '*/node_modules/*' -not -path '*/.git/*' 2>/dev/null | sed "s#^$ROOT/##; s#/\?erd.env\$##" | sed 's#^$#.#' | sort)"
+UNITS="$(find "$ROOT" -name erd.env -not -path '*/node_modules/*' -not -path '*/.git/*' 2>/dev/null | sed -E "s#^$ROOT/?##; s#/?erd\.env\$##" | sed 's#^$#.#' | sort)"
 if [ "$UNIT" != "." ] || [ "$(printf '%s\n' "$UNITS" | grep -c .)" -gt 1 ]; then
   LIST="$(for u in $UNITS; do d=$(grep -h '^ERD_DIALECT=' "$ROOT/$u/erd.env" 2>/dev/null | cut -d= -f2); s=$(grep -h '^ERD_SOURCE=' "$ROOT/$u/erd.env" 2>/dev/null | cut -d= -f2); echo "  - \`$u\` ($d, $s)"; done)"
   ROOT_BLOCK="$(cat <<EOF

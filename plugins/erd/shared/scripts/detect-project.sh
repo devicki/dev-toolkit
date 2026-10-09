@@ -10,6 +10,8 @@ EXCL='-not -path */node_modules/* -not -path */.git/* -not -path */vendor/* -not
 f() { find . -maxdepth "${2:-6}" $EXCL -type f -name "$1" 2>/dev/null | head -"${3:-5}"; }
 d() { find . -maxdepth "${2:-6}" $EXCL -type d -path "$1" 2>/dev/null | head -"${3:-5}"; }
 g() { grep -rIl --exclude-dir={node_modules,.git,vendor,.venv,venv,dist,build,target,.next} -E "$1" . 2>/dev/null | head -"${2:-5}"; }
+# 파일 목록 중 패턴을 가진 파일만 (BSD/GNU 공통: xargs -r 대신 루프)
+grepf() { local pat="$1" x; while IFS= read -r x; do [ -n "$x" ] && grep -lE "$pat" "$x" 2>/dev/null; done; }
 show() {
   local label="$1"; shift
   local hits; hits=$(printf '%s\n' $* | sed '/^[[:space:]]*$/d' | sort -u | head -8)
@@ -24,7 +26,7 @@ echo "## 1. 기존 ERD 관리 상태"
 FOUND=0
 show "DBML 파일" "$(f '*.dbml')"
 show "tbls 설정" "$(f '.tbls.yml' 3) $(f 'tbls.yml' 3)"
-show "tbls 생성 문서" "$(f 'schema.json' 4 | xargs -r grep -l '"tables"' 2>/dev/null)"
+show "tbls 생성 문서" "$(f 'schema.json' 4 | grepf '"tables"')"
 show "erd 플러그인 설정(erd.env)" "$(f 'erd.env' 3)"
 [ $FOUND = 0 ] && echo "- 없음 (초기 구축 대상)"
 echo
@@ -59,13 +61,13 @@ show "PostgreSQL" "$(g 'postgres(ql)?://|psycopg|asyncpg|pg_|\"pg\"|org\.postgre
 show "MySQL/MariaDB" "$(g 'mysql://|mariadb|pymysql|mysql2|com\.mysql|provider *= *\"mysql\"' 5)"
 show "SQLite" "$(g 'sqlite:|sqlite3|provider *= *\"sqlite\"' 5)"
 show "SQL Server/Oracle" "$(g 'sqlserver|mssql|oracle' 3)"
-show "docker-compose DB 서비스" "$(f 'docker-compose*.yml' 3 | xargs -r grep -lE 'image: *(postgres|mysql|mariadb)' 2>/dev/null) $(f 'compose*.yml' 3 | xargs -r grep -lE 'image: *(postgres|mysql|mariadb)' 2>/dev/null)"
+show "docker-compose DB 서비스" "$(f 'docker-compose*.yml' 3 | grepf 'image: *(postgres|mysql|mariadb)') $(f 'compose*.yml' 3 | grepf 'image: *(postgres|mysql|mariadb)')"
 [ $FOUND = 0 ] && echo "- 단서 없음 (사용자에게 확인)"
 echo
 
 echo "## 4. 화면·API 소스 (엔티티 추출 후보)"
 FOUND=0
-show "프론트엔드" "$(f 'package.json' 3 | xargs -r grep -lE '\"(react|vue|next|nuxt|svelte|@angular/core)\"' 2>/dev/null)"
+show "프론트엔드" "$(f 'package.json' 3 | grepf '"(react|vue|next|nuxt|svelte|@angular/core)"')"
 show "API 스펙" "$(f 'openapi*.y*ml') $(f 'openapi*.json') $(f 'swagger*.y*ml') $(f 'swagger*.json') $(f '*.graphql')"
 show "DTO/스키마 (TS)" "$(g 'interface [A-Z][A-Za-z]+(Dto|Request|Response)|z\.object\(' 5 | grep -E '\.tsx?$')"
 show "DTO/스키마 (Python)" "$(g 'class [A-Z][A-Za-z]+\((BaseModel|Schema)\)' 5 | grep -E '\.py$')"
