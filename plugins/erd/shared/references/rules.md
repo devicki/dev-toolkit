@@ -1,6 +1,6 @@
 # 강제 규칙과 금지 사항 (모든 erd 스킬 공통)
 
-> 기준: erd 플러그인 0.3.0 — 2026-10. 각 스킬의 "강제 규칙" 절은 이 문서를 가리킨다.
+> 기준: erd 플러그인 0.3.1 — 2026-10. 각 스킬의 "강제 규칙" 절은 이 문서를 가리킨다.
 > 규칙마다 **이유(실제로 겪은 문제)**를 붙였다. 이유가 사라지지 않는 한 우회하지 않는다.
 
 ## 강제 규칙
@@ -17,7 +17,7 @@
 
 ## 금지 사항
 
-- ❌ `docs/schema/`, `db/schema.sql`, `db/schema.generated.dbml` 직접 수정 (생성물 — 다음 `make erd` 에서 덮어써짐)
+- ❌ `docs/schema/`, `db/schema.sql`, `db/schema.generated.dbml` 직접 수정 (생성물 — 다음 `make erd` 에서 덮어써짐). `migrations` 단위의 설명·ADR 참조는 `.tbls.yml` `comments:` 에 쓴다
 - ❌ 운영 DB 주소를 `PG=`, `MY=`, `ERD_MIGRATE_CMD`, `tbls` 인자에 넣기
 - ❌ 이미 적용된(커밋·배포된) 마이그레이션 파일 수정 — 새 마이그레이션을 추가한다
 - ❌ `dbml-error.log` 커밋 (`.gitignore` 에 있음)

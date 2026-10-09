@@ -14,6 +14,14 @@ viewpoints: []
 #    tables:
 #      - users
 
+# 문서 전용 주석·라벨 (ERD_SOURCE=migrations 에서 ADR 참조를 남기는 곳). DB 주석을 대체하니 기존 문구를 살려 쓴다.
+# comments:
+#   - table: users
+#     tableComment: "회원. ADR-003: 소프트 삭제"
+#     columnComments:
+#       deleted_at: "삭제 시각, NULL=활성 (ADR-003)"
+#     labels: [ADR-003]
+
 lint:
   requireTableComment:
     enabled: true

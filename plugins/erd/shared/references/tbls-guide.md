@@ -53,6 +53,25 @@ lint:
     - alembic_version
   ```
 
+## comments — 코드·DB 를 건드리지 않고 문서에 설명·ADR 연결
+
+`ERD_SOURCE=migrations` 단위에서 ADR 참조나 설명을 남기는 곳. `make erd` 때 tbls 가 DB 구조에 덧붙여 문서를 만든다.
+
+```yaml
+comments:
+  - table: users                     # public 스키마는 접두사 생략 가능
+    tableComment: "회원. ADR-003: 소프트 삭제"
+    columnComments:
+      deleted_at: "삭제 시각, NULL=활성 (ADR-003)"
+    labels: [ADR-003]                # README 테이블 목록의 Labels 열에 표시 → ADR 별 영향 테이블 검색
+```
+
+1.96.1 에서 확인한 동작:
+- **설정의 `tableComment`/`columnComments` 는 DB 주석을 대체**한다(합치지 않음). DB 에 주석이 있으면 `docs/schema/<table>.md` 의 기존 문구를 앞에 두고 ADR 을 덧붙인다. 지정하지 않은 컬럼은 DB 주석 그대로.
+- `tbls lint` 의 `requireTableComment`/`requireColumnComment` 는 설정 주석도 인정한다.
+- 설정만 바꾸고 `make erd` 를 안 돌리면 `make erd-check` 가 차이로 잡는다 (문서와 같은 커밋에).
+- ADR 은 결정 번호 + 한 줄 요약만. 본문은 ADR 문서에 두고 복사하지 않는다.
+
 ## 공용 /tmp 문제 (여러 계정이 같은 서버에서 tbls 사용)
 
 증상: `panic: open /tmp/go-graphviz/...: permission denied` (`erd-doc.sh` 는 `ERD_EXIT=8 tbls` 와 안내문을 출력)
