@@ -1,110 +1,114 @@
-# DBML 작성 규칙
+# DBML conventions
 
-> 기준: DBML 문법(@dbml/cli 10.3, 모듈 시스템 `use`/`reuse` 포함) — https://dbml.dbdiagram.io/docs/ , 2026-10 확인.
-> 프로젝트에 이미 규칙이 있으면 그 규칙이 우선한다.
+> Baseline: DBML syntax (@dbml/cli 10.3, including the module system `use`/`reuse`) — https://dbml.dbdiagram.io/docs/ , verified 2026-10.
+> If the project already has its own conventions, those take precedence.
 
-문법 전체: https://dbml.dbdiagram.io/docs/  (모듈 시스템: https://dbml.dbdiagram.io/syntax/module-system)
+Full syntax: https://dbml.dbdiagram.io/docs/  (module system: https://dbml.dbdiagram.io/syntax/module-system)
 
-## 파일 구조
+## File layout
 
 ```
 db/
-├── schema.dbml            # 진입점: Project 블록 + use 목록
+├── schema.dbml            # entry point: Project block + list of use
 └── modules/
-    ├── user.dbml          # 모듈 = 업무 도메인 단위 (회원, 주문, 자산 …)
+    ├── user.dbml          # module = one business domain (users, orders, assets …)
     └── order.dbml
 ```
 
-- 모듈 하나 = 파일 하나 = `.tbls.yml` viewpoint 하나 (id 를 파일명과 같게).
-- 다른 모듈 테이블은 `use { table users } from './user'` 로 가져와 참조한다. `use` 는 전이되지 않는다.
-- 진입점은 `use * from './modules/<모듈>'` 만 둔다. 테이블 정의를 넣지 않는다.
-- `TableGroup`, 색상, sticky note 는 dbdiagram 유료 기능에서만 시각화되므로 모듈 분리는 **파일**로 한다.
+### Module split
 
-## 다른 ERD 단위(다른 DB) 참조
+- One module = one file = one `.tbls.yml` viewpoint (id same as the file name).
+- Tables from other modules are imported with `use { table users } from './user'` and then referenced. `use` is not transitive.
+- The entry point contains only `use * from './modules/<module>'`. Do not put table definitions in it.
+- `TableGroup`, colors and sticky notes are only visualized in paid dbdiagram features, so modules are split by **file**.
 
-모노레포에서 DB 가 다른 서비스의 테이블은 `ref` 로 연결할 수 없다. note 로 표시한다 (`units.md` 참고):
+## Referencing another ERD unit
+
+In a monorepo, tables of a service with a different DB cannot be linked with `ref`. Mark them with a note instead (see `units.md`):
 
 ```dbml
-user_id bigint [not null, note: '회원 ID → api: users.id (다른 DB, FK 없음)']
+user_id bigint [not null, note: 'User ID → api: users.id (other DB, no FK)']
 ```
 
-## 명명
+## Naming
 
-| 대상 | 규칙 | 예 |
+Identifiers are English snake_case regardless of `ERD_LANG`; notes/comments follow `ERD_LANG` (R8).
+
+| Target | Rule | Example |
 |---|---|---|
-| 테이블 | snake_case 복수형 | `users`, `order_items` |
-| 컬럼 | snake_case | `created_at` |
+| Table | snake_case plural | `users`, `order_items` |
+| Column | snake_case | `created_at` |
 | PK | `id` | |
-| FK | `<참조 테이블 단수>_id` | `user_id` |
-| 인덱스 | `idx_<테이블>_<컬럼>` / 유니크 `uq_<테이블>_<컬럼>` | `idx_orders_user_id` |
-| 불리언 | `is_` / `has_` 접두사 | `is_active` |
-| 일시 | `_at` 접미사, 날짜만이면 `_on` / `_date` | `paid_at` |
+| FK | `<referenced table singular>_id` | `user_id` |
+| Index | `idx_<table>_<column>` / unique `uq_<table>_<column>` | `idx_orders_user_id` |
+| Boolean | `is_` / `has_` prefix | `is_active` |
+| Date-time | `_at` suffix; date only: `_on` / `_date` | `paid_at` |
 
-프로젝트에 이미 다른 규칙이 있으면(기존 테이블, ORM 설정) **기존 규칙을 따른다**. 새 규칙을 강요하지 않는다.
+If the project already has different conventions (existing tables, ORM settings), **follow the existing conventions**. Do not impose new ones.
 
-## 한번 정하면 바꾸기 비싼 것 (설계 단계에서 먼저 확정)
+## Expensive to change (settle these first, at design time)
 
-- 테이블·컬럼 이름 — 운영 데이터가 생기면 rename 마이그레이션 + 코드 전체 수정이 필요
-- 모듈 id (= `db/modules/<id>.dbml` 파일명 = `.tbls.yml` viewpoint id = 문서 파일명 `viewpoint-<id>.md`)
-- PK 전략 (bigint 증가 / UUID) 과 테넌트 키 유무
-- 상태값의 의미 (값 추가는 쉽지만 의미 변경은 데이터 이관이 필요)
+- Table and column names — once production data exists, a rename migration + code-wide changes are required
+- Module id (= `db/modules/<id>.dbml` file name = `.tbls.yml` viewpoint id = doc file name `viewpoint-<id>.md`)
+- PK strategy (bigint auto-increment / UUID) and whether there is a tenant key
+- Meaning of status values (adding values is easy, but changing a meaning requires data migration)
 
-## 규모 감각
+## Scale signals
 
-| 대상 | 보통 | 점검 신호 |
+| Target | Typical | Signal to check |
 |---|---|---|
-| 모듈당 테이블 | 3~15개 | 30개 초과 → 모듈 분할 검토, 1~2개 → 인접 모듈과 합치기 검토 |
-| 테이블당 컬럼 | 5~30개 | 50개 초과 → 성격이 다른 컬럼 그룹 분리 검토 (lint `columnCount` 로 강제 가능) |
-| 단위(DB)당 모듈 | 3~12개 | 20개 초과 → 단위(서비스) 분리 여부를 아키텍처 관점에서 검토 |
+| Tables per module | 3–15 | over 30 → consider splitting the module; 1–2 → consider merging with a neighboring module |
+| Columns per table | 5–30 | over 50 → consider splitting off groups of columns with a different nature (can be enforced with lint `columnCount`) |
+| Modules per unit (DB) | 3–12 | over 20 → review from an architecture standpoint whether to split the unit (service) |
 
-벗어난다고 틀린 것은 아니다. 신호가 보이면 사용자에게 한 번 확인한다.
+Being outside these ranges is not wrong in itself. When a signal appears, confirm with the user once.
 
-## 필수 사항 (tbls lint 가 검사)
+## Required (checked by tbls lint)
 
-- 모든 테이블에 `Note`, 모든 컬럼에 `note` (업무 의미를 한국어로).
-- FK 컬럼에는 인덱스 (`indexes { user_id [name: 'idx_orders_user_id'] }`).
-- 모든 테이블은 어느 모듈(viewpoint)에 속해야 한다.
-- 다른 테이블과 관계가 하나도 없는 테이블은 의도된 것인지 note 에 적는다.
+- A `Note` on every table and a `note` on every column (business meaning, written in the unit's `ERD_LANG` — R8).
+- An index on FK columns (`indexes { user_id [name: 'idx_orders_user_id'] }`).
+- Every table must belong to some module (viewpoint).
+- For a table with no relationship to any other table, state in its note whether that is intentional.
 
-## 권장 패턴
+## Recommended patterns
 
 ```dbml
 Table orders {
   id bigint [pk, increment, note: 'PK']
-  user_id bigint [not null, ref: > users.id, note: '주문한 회원']
+  user_id bigint [not null, ref: > users.id, note: 'User who placed the order']
   status varchar(20) [not null, default: 'pending', note: 'pending | paid | canceled']
-  total_amount numeric(12,2) [not null, default: 0, note: '주문 총액(원)']
-  created_at timestamptz [not null, default: `now()`, note: '생성 일시']
-  updated_at timestamptz [not null, default: `now()`, note: '수정 일시']
-  deleted_at timestamptz [note: '소프트 삭제 일시']
+  total_amount numeric(12,2) [not null, default: 0, note: 'Order total (KRW)']
+  created_at timestamptz [not null, default: `now()`, note: 'Created at']
+  updated_at timestamptz [not null, default: `now()`, note: 'Updated at']
+  deleted_at timestamptz [note: 'Soft-deleted at']
 
   indexes {
     user_id [name: 'idx_orders_user_id']
     (user_id, created_at) [name: 'idx_orders_user_id_created_at']
   }
-  Note: '주문'
+  Note: 'Orders'
 }
 ```
 
-- 상태값은 `enum` 보다 `varchar + note` 를 기본으로 한다(마이그레이션이 쉬움). 값 집합이 고정이고 DB 차원 검증이 필요하면 `enum` 또는 `checks`.
-- 금액은 `numeric(p,s)`, 부동소수점 금지.
-- 시간은 PostgreSQL 이면 `timestamptz`.
-- 공통 컬럼(`created_at` 등)이 반복되면 `TablePartial` 사용 가능:
+- For status values, default to `varchar + note` rather than `enum` (easier migrations). If the value set is fixed and DB-level validation is needed, use `enum` or `checks`.
+- Money uses `numeric(p,s)`; floating point is prohibited.
+- Time uses `timestamptz` on PostgreSQL.
+- When common columns (`created_at`, etc.) repeat, `TablePartial` can be used:
   ```dbml
   TablePartial timestamps {
-    created_at timestamptz [not null, default: `now()`, note: '생성 일시']
-    updated_at timestamptz [not null, default: `now()`, note: '수정 일시']
+    created_at timestamptz [not null, default: `now()`, note: 'Created at']
+    updated_at timestamptz [not null, default: `now()`, note: 'Updated at']
   }
-  Table users { id bigint [pk]  ~timestamps  Note: '회원' }
+  Table users { id bigint [pk]  ~timestamps  Note: 'Users' }
   ```
 
-## 변환 명령 (@dbml/cli)
+## Conversion commands (@dbml/cli)
 
-| 명령 | 용도 |
+| Command | Purpose |
 |---|---|
 | `dbml2sql db/schema.dbml --postgres -o db/schema.sql` | DBML → DDL (`--mysql`, `--mssql`, `--oracle`) |
 | `sql2dbml dump.sql --postgres -o db/schema.dbml` | DDL → DBML |
-| `db2dbml postgres '<conn>' -o db/schema.dbml` | 실제 DB → DBML (`mysql`, `mssql`, `snowflake`, `bigquery`, `oracle`) |
+| `db2dbml postgres '<conn>' -o db/schema.dbml` | Live DB → DBML (`mysql`, `mssql`, `snowflake`, `bigquery`, `oracle`) |
 
-`dbml2sql` 은 `Note` 를 `COMMENT ON ...` 으로 변환하므로 tbls 문서에 설명이 그대로 들어간다.
-변환 실패 시 `dbml-error.log` 가 생기므로 내용을 확인하고 지운다.
+`dbml2sql` converts `Note` into `COMMENT ON ...`, so descriptions carry straight into the tbls docs.
+On conversion failure a `dbml-error.log` is created; check its contents, then delete it.

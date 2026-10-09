@@ -1,5 +1,15 @@
 # erd 플러그인 변경 이력
 
+## 0.4.0 — 영어 우선 + 언어 선택
+- SKILL.md 6개·참고 문서 9개·플러그인 헬퍼 스크립트를 영어 한 벌로 (description 은 영어 + 한국어 트리거 예시). 상시 토큰 약 1,076 → 약 750
+- R8 언어 규칙: 대화·리포트는 사용자 언어(한국어 라벨표로 0.3.x 양식 유지), 프로젝트에 쓰는 내용은 `ERD_LANG`, 식별자는 항상 영어
+- `erd.env` 에 `ERD_LANG=ko|en`. `install-templates.sh --lang`: ERD_GUIDE·erd.env·.tbls.yml·DBML 예시·CLAUDE.md/AGENTS.md 블록을 언어별로 (`shared/templates/i18n/{ko,en}/`)
+  - `--lang` 없으면 기존 단위 설정 → 다른 단위 설정 → en. 기존 `ERD_LANG` 은 바꾸지 않음(`!`)
+  - **0.3.x 단위 업그레이드**: `erd.env` 에 `ERD_LANG` 이 없으면 `!` 경고 — `/erd:init` 재실행(또는 `--lang ko`)으로 추가. 없으면 메시지는 영어
+- `scripts/erd-doc.sh`·`erd-changed.sh`·`erd.mk` 메시지 한/영 (`ERD_LANG` 환경변수로 덮어쓰기 가능). 기존 프로젝트는 `install-templates.sh ... --update-scripts` 로 교체
+- 수정: `set -o pipefail` 에서 grep 무결과로 조용히 종료될 수 있던 경로 방지
+- 테스트 12개 (영어 설치에 한글 없음, 한국어 메시지, 언어 상속, 0.3.x erd.env 업그레이드)
+
 ## 0.3.1
 - `ERD_SOURCE=migrations` 단위의 ADR 연결: `/erd:import docs`(와 orm 후속 단계)가 결정을 `.tbls.yml` `comments:`(tableComment·columnComments·`labels: [ADR-xxx]`)에 기록. 파생 DBML·ORM 코드는 건드리지 않음
   - tbls 1.96.1 동작 확인: 설정 주석은 DB 주석을 **대체**(기존 문구 보존 규칙), lint 가 설정 주석을 인정, 설정만 바꾸면 `erd-check` 가 차이로 감지 — `tbls-guide.md` "comments" 절

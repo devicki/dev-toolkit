@@ -1,0 +1,8 @@
+// Schema entry point: pulls in the module files.
+// When you add a module, add a `use` line here and register it in .tbls.yml viewpoints.
+Project __PROJECT_NAME__ {
+  database_type: '__DB_TYPE__'
+  Note: 'Source of truth: db/modules/*.dbml'
+}
+
+// use * from './modules/user'

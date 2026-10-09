@@ -1,121 +1,122 @@
 ---
 name: import
 description: >
-  기존 자산(화면·API 소스, ORM·마이그레이션, ERD·ADR 문서, 실행 중 DB)에서 DBML 생성 또는 기존 DBML 보강. 산출물: db/modules/*.dbml + [추정] 목록.
-  트리거: "소스코드에서 ERD 뽑아줘", "문서 DBML로 옮겨줘", "이 화면 보고 ERD 보강" / "reverse engineer ERD".
-  비활성: 요구사항 기반 새 설계(→ design), 품질 검토(→ review).
-argument-hint: "[code|orm|docs|db|augment] [경로...] [--project <단위 폴더>]"
+  Build or extend DBML from existing code, ORM/migrations, docs/ADRs or a DB. Output: db/modules/*.dbml + inferred-item list.
+  Triggers: "소스코드에서 ERD 뽑아줘", "이 화면 보고 ERD 보강" / "reverse engineer ERD", "DBML from models".
+  Not for: new design (→ /erd:design), review (→ /erd:review).
+argument-hint: "[code|orm|docs|db|augment] [path...] [--project <unit folder>]"
 allowed-tools:
   - "Bash(bash ${CLAUDE_PLUGIN_ROOT}/shared/scripts/*)"
   - "Bash(make erd*)"
 ---
 
-# /erd:import — 기존 자산에서 DBML 만들기·보강
+# /erd:import — build or extend DBML from existing assets
 
-> **한 줄 정의**: 이미 있는 것(코드·문서·DB)에서 스키마를 뽑아 DBML 로 옮긴다. 새 요구사항 설계는 design 이 맡는다.
-> **핵심 산출물**: `<단위>/db/modules/<모듈>.dbml`, `<단위>/docs/schema/`, `[추정]` 목록
+> **One-line definition**: extract the schema from what already exists (code, docs, DB) and move it into DBML. Designing for new requirements belongs to design.
+> **Key outputs**: `<unit>/db/modules/<module>.dbml`, `<unit>/docs/schema/`, list of `[inferred]` (`[추정]` in ko) items
 
-## 스킬 파일 (`${CLAUDE_PLUGIN_ROOT}/shared/`)
-- `scripts/find-units.sh`, `scripts/detect-project.sh <단위>` — 대상 단위·출처 후보 탐색
-- `references/rules.md` — 강제 규칙·금지 (필수)
-- `references/dbml-conventions.md` — DBML 작성 규칙·모듈 분할·규모 감각
-- `references/migration-tools.md` — ORM/마이그레이션 → DBML 경로, `sql2dbml`/`db2dbml`
-- `references/units.md` — 단위 결정·다른 DB 참조 표기
-- `references/report-templates.md` — 마무리 보고 양식(3번)
-- `references/errors.md` — `ERD_EXIT` 대응
+## Skill files (`${CLAUDE_PLUGIN_ROOT}/shared/`)
+- `scripts/find-units.sh`, `scripts/detect-project.sh <unit>` — find the target unit and source candidates
+- `references/rules.md` — Hard rules, Prohibited (required)
+- `references/dbml-conventions.md` — DBML writing rules, module split, scale signals
+- `references/migration-tools.md` — ORM/migrations → DBML paths, `sql2dbml`/`db2dbml`
+- `references/units.md` — resolving the unit, notation for references to another DB
+- `references/report-templates.md` — Completion report template (§3)
+- `references/errors.md` — `ERD_EXIT` responses
 
-## 강제 규칙 (최우선) — 전체는 `rules.md`
-1. 코드·문서에서 **확인한 것만** 확정값으로 쓴다. 추론한 타입·길이·null·관계 방향은 note 에 `[추정]` (R7).
-2. 문서 생성은 `make erd P=<단위>` 로만 (R1). `dbml2sql` 을 직접 돌려 문법을 확인하지 않는다 — 오류여도 exit 0.
-3. 출처끼리 다르면 임의로 고르지 말고 차이 목록을 보여 주고 결정을 받는다.
+## Hard rules (top priority) — full list in `rules.md`
+1. Write as definite values **only what you verified** in code or docs. Inferred types, lengths, nullability and relation directions get `[inferred]` in the note (R7).
+2. Generate docs only with `make erd P=<unit>` (R1). Do not run `dbml2sql` directly to check syntax — it exits 0 even on errors.
+3. If sources disagree, do not pick one arbitrarily; show the list of differences and get a decision.
+4. Language (R8): reply in the user's language; text written into the project follows the unit's `ERD_LANG`.
 
-## 0단계: 대상 단위·사전 조건
-- `units.md` "대상 단위 결정" (`--project` → 가장 가까운 erd.env → 하나뿐이면 그것 → 질문). 시작할 때 `대상: <단위> (<DB>, ERD_SOURCE=<값>)` 를 밝힌다.
-- `erd.env` 가 없으면 `/erd:init` 먼저.
-- 출처 후보: `detect-project.sh <단위>` + `erd.env` 의 `ERD_RELATED_SOURCES` 폴더.
+## Step 0: target unit and prerequisites
+- `units.md` "Resolving the target unit" (`--project` → nearest erd.env → the only unit if there is one → ask). State `Target: <unit> (<DB>, ERD_SOURCE=<value>)` at the start.
+- If there is no `erd.env`, run `/erd:init` first.
+- Source candidates: `detect-project.sh <unit>` + the folders in `ERD_RELATED_SOURCES` of `erd.env`.
 
-## 1단계: 모드 선택
-요청에서 분명하면 묻지 않는다. 모호할 때만 한 번 묻는다. 여러 출처를 함께 쓸 수 있다 (예: orm 기준 + code 로 보강).
+## Step 1: choose the mode
+If the request makes it clear, do not ask. Ask once only when ambiguous. Several sources can be combined (e.g. orm as the base + code to extend).
 
-| 모드 | 상황 | 초반 접근 |
+| Mode | Situation | Initial approach |
 |---|---|---|
-| **orm** | ORM 모델·마이그레이션이 있음 (`ERD_SOURCE=migrations`) | `make erd P=<단위>` → `db/schema.generated.dbml` + 문서 → 모델 코드와 대조 |
-| **db** | 실행 중인 DB 만 있음 | 접속 정보를 받아 `db2dbml` → 모듈 분할 |
-| **code** | 화면·API·DTO 소스만 있음 (DB 미구현) | 엔티티 후보 추출 → 사용자 검증 → 컬럼·관계 |
-| **docs** | ERD·ADR·기획·테이블 정의서 | 문서 수집 → DBML 이관 → 문서 간·코드와의 차이 보고 |
-| **augment** | **이미 DBML 이 있고** 새 소스(기능·화면)로 보강 | 기존 DBML 읽기 → 새 소스에서 추가분만 추출 → 기존 테이블과 매칭(재사용/컬럼 추가/새 테이블) → diff 로 제안 |
+| **orm** | ORM models / migrations exist (`ERD_SOURCE=migrations`) | `make erd P=<unit>` → `db/schema.generated.dbml` + docs → compare with model code |
+| **db** | Only a running DB exists | Get connection info, `db2dbml` → module split |
+| **code** | Only UI/API/DTO sources (DB not implemented) | Extract entity candidates → user validation → columns and relations |
+| **docs** | ERD, ADR, planning docs, table definition sheets | Collect docs → migrate to DBML → report differences between docs and against code |
+| **augment** | **DBML already exists** and new sources (feature, screen) extend it | Read existing DBML → extract only the additions from the new source → match against existing tables (reuse / add column / new table) → propose as a diff |
 
-## 2단계: 모드별 절차
+## Step 2: procedure per mode
 
 ### orm
-1. `make erd P=<단위>` (원본은 마이그레이션). 실패하면 `ERD_EXIT` 로 `errors.md`.
-2. 마이그레이션이 없거나 실행 불가면 모델 코드를 읽어 DBML 초안 — "코드에서 추론한 초안"이라고 명시, 불확실한 값은 `[추정]`.
-3. 모델 ↔ 생성 결과 차이(모델엔 있는데 마이그레이션에 없는 필드 등)를 보고.
-4. ADR·설계 문서가 있으면 docs 모드 2번으로 이어서 `.tbls.yml` `comments:` 에 결정을 연결한다.
+1. `make erd P=<unit>` (source of truth is the migrations). On failure, use `ERD_EXIT` with `errors.md`.
+2. If there are no migrations or they cannot run, read the model code and write a DBML draft — label it "draft inferred from code"; uncertain values get `[inferred]`.
+3. Report differences between models and generated output (fields in the model but missing from migrations, etc.).
+4. If ADRs / design docs exist, continue with docs mode item 2 and link the decisions in `.tbls.yml` `comments:`.
 
 ### db
-1. 접속 정보는 사용자에게 받는다. **읽기 전용 계정 권장**, 운영 DB 면 한 번 더 확인.
-2. `db2dbml postgres '<conn>' -o <단위>/db/schema.imported.dbml` (MySQL: `mysql`) — 이 명령은 읽기만 하므로 R1 예외.
-3. "모듈 분할"로 `db/modules/*.dbml` 재구성.
+1. Get connection info from the user. **A read-only account is recommended**; if it is a production DB, confirm once more.
+2. `db2dbml postgres '<conn>' -o <unit>/db/schema.imported.dbml` (MySQL: `mysql`) — this command only reads, so it is an R1 exception.
+3. Restructure into `db/modules/*.dbml` following "Module split" (`dbml-conventions.md`).
 
 ### code
-단위 폴더 + `ERD_RELATED_SOURCES` 를 읽는다. 다른 단위(다른 DB) 소속으로 보이는 엔티티는 넣지 말고 "다른 단위 후보"로 따로 보고.
+Read the unit folder + `ERD_RELATED_SOURCES`. Entities that appear to belong to another unit (another DB) are not added; report them separately as "other-unit candidates".
 
-| 소스 | 단서 |
+| Source | Hints |
 |---|---|
-| 프론트 폼 | 필드 이름·타입·필수·maxLength, select 옵션(상태값) |
-| 프론트 목록·상세 | 표시 컬럼, 정렬·필터·검색(→ 인덱스 후보) |
-| 라우트·메뉴 | 도메인 경계(→ 모듈 후보) |
-| API 스펙 (OpenAPI/GraphQL) | 리소스=테이블 후보, 중첩 경로(`/orders/{id}/items` → FK) |
-| 백엔드 DTO·서비스 | 저장·조회 필드, 조인, 트랜잭션 묶음 |
+| Frontend forms | Field names, types, required, maxLength, select options (status values) |
+| Frontend list / detail | Displayed columns, sort/filter/search (→ index candidates) |
+| Routes / menus | Domain boundaries (→ module candidates) |
+| API specs (OpenAPI/GraphQL) | Resource = table candidate, nested paths (`/orders/{id}/items` → FK) |
+| Backend DTOs / services | Stored and queried fields, joins, transaction groupings |
 
-1. 엔티티 후보 표 `엔티티 | 근거 파일 | 근거` → 사용자가 빼거나 합칠 것 확인.
-2. 컬럼 추출 (불확실 → `[추정]`), 관계 정리, N:M 은 조인 테이블.
-3. 공통 컬럼(id, created_at 등)은 프로젝트 관례를 따른다.
+1. Entity candidate table `Entity | Evidence file | Evidence` → confirm with the user what to drop or merge.
+2. Extract columns (uncertain → `[inferred]`), organize relations; N:M becomes a join table.
+3. Common columns (id, created_at, etc.) follow project conventions.
 
 ### docs
-1. 형식별로 읽는다: Markdown/텍스트 표, 이미지 ERD(내용을 읽어 옮김), SQL/DBML 내보내기(`sql2dbml` — 읽기 전용 변환이라 R1 예외), 엑셀 테이블 정의서.
-2. ADR 은 스키마에 영향을 주는 **결정**(소프트 삭제, 멀티테넌트, ID 전략)을 뽑아 `ADR 결정 | 영향 테이블·컬럼 | 스키마와 일치?` 표로 먼저 보여 준다. 기록 위치는 `ERD_SOURCE` 로 정한다:
-   - `dbml` → 해당 테이블·컬럼 note / Project Note 에 `ADR-xxx` 참조.
-   - `migrations` → **`.tbls.yml` 의 `comments:`** (`tableComment`·`columnComments`·`labels: [ADR-xxx]`). 파생 DBML(`schema.generated.dbml`)·ORM 코드는 건드리지 않는다. 작성 규칙은 `tbls-guide.md` "comments" 절 — **설정의 comment 는 DB 주석을 대체**하므로 기존 주석(`docs/schema/<table>.md`)을 앞에 살려 쓴다.
-   - 스키마와 어긋나는 ADR 은 기록하지 말고 차이로 보고한다 (강제 규칙 3).
-3. 이관 후 원 문서에 "DBML(db/modules)로 이관됨" 표시를 제안 (수정은 승인 후).
+1. Read by format: Markdown/text tables, image ERDs (read the content and transcribe), SQL/DBML exports (`sql2dbml` — a read-only conversion, so an R1 exception), Excel table definition sheets.
+2. From ADRs, extract the **decisions** that affect the schema (soft delete, multi-tenancy, ID strategy) and first show them as a table `ADR decision | Affected tables/columns | Matches schema?`. Where to record them depends on `ERD_SOURCE`:
+   - `dbml` → reference `ADR-xxx` in the relevant table/column note or the Project Note.
+   - `migrations` → **`.tbls.yml` `comments:`** (`tableComment`, `columnComments`, `labels: [ADR-xxx]`). Do not touch the derived DBML (`schema.generated.dbml`) or ORM code. Writing rules: `tbls-guide.md` "comments" section — **a comment in the config replaces the DB comment**, so keep the existing comment (`docs/schema/<table>.md`) and put it first.
+   - ADRs that contradict the schema are not recorded; report them as differences (Hard rule 3).
+3. After migrating, propose marking the original doc "Migrated to DBML (db/modules)" (edit only after approval).
 
 ### augment
-1. 기존 `db/modules/*.dbml` 과 `docs/schema/schema.json` 을 먼저 읽는다 (0단계: 선행 산출물 확인).
-2. 새 소스에서 필요한 데이터를 code 모드 방식으로 추출하되, **추가분만** 정리한다.
-3. 기존 테이블과 매칭: 같은 개념이면 컬럼 추가, 새 개념이면 새 테이블, 애매하면 질문.
-4. 변경 전/후 diff 로 제안 → 확인 후 반영. 기존 테이블·컬럼 이름 변경은 하지 않는다 (필요하면 별도 제안).
+1. Read the existing `db/modules/*.dbml` and `docs/schema/schema.json` first (step 0: check prior outputs).
+2. Extract the data the new source needs the same way as code mode, but organize **only the additions**.
+3. Match against existing tables: same concept → add columns; new concept → new table; unclear → ask.
+4. Propose as a before/after diff → apply after confirmation. Do not rename existing tables/columns (propose separately if needed).
 
-## 3단계: 모듈 분할·저장·문서화
-- 테이블을 업무 도메인별로 `db/modules/<모듈>.dbml` 에 저장 (`dbml-conventions.md`, 규모 감각 참고). 경계 근거(라우트·패키지·FK 밀집도)를 제안하고 확인.
-- `db/schema.dbml` 에 `use * from './modules/<모듈>'`, `.tbls.yml` viewpoints 에 모듈 추가 (id = 파일명).
-- `make erd P=<단위>` → 실패 시 `ERD_EXIT` 대응 → lint 경고 중 자동 수정 가능한 것(note 누락)은 고칠지 묻는다.
+## Step 3: module split, save, document
+- Save tables per business domain in `db/modules/<module>.dbml` (see `dbml-conventions.md` "Module split" and "Scale signals"). Propose the boundary evidence (routes, packages, FK density) and confirm.
+- Add `use * from './modules/<module>'` to `db/schema.dbml`, and the module to `.tbls.yml` viewpoints (id = file name).
+- `make erd P=<unit>` → on failure respond to `ERD_EXIT` → for lint warnings that can be fixed automatically (missing notes), ask whether to fix them.
 
-## 판단 규칙
-| 조건 | 결과 |
+## Decision table
+| Condition | Result |
 |---|---|
-| 코드에 타입·제약이 명시됨 (엔티티 어노테이션, 마이그레이션) | 확정값 |
-| 화면·DTO 에서만 추론 | `[추정]` |
-| 출처 간 불일치 | 확정하지 않고 차이 목록으로 질문 |
-| 다른 DB 소속으로 보임 | 이 단위에서 제외, "다른 단위 후보" 보고 |
+| Type/constraint stated explicitly in code (entity annotations, migrations) | Definite value |
+| Inferred only from screens / DTOs | `[inferred]` |
+| Sources disagree | Do not settle; ask with the list of differences |
+| Appears to belong to another DB | Exclude from this unit; report as "other-unit candidates" |
 
-## 에러 처리
-`references/errors.md` (`ERD_EXIT` 코드별) + 아래.
-| 상황 | 동작 |
+## Error handling
+`references/errors.md` (by `ERD_EXIT` code) + below.
+| Situation | Action |
 |---|---|
-| `db2dbml` 접속 실패 | 접속 정보 확인 요청, 추정으로 진행 금지 |
-| 이미지 ERD 가 판독 불가 | 판독 못 한 부분을 목록으로 알리고 `[TBD]` |
+| `db2dbml` connection fails | Ask the user to check the connection info; do not proceed on guesses |
+| Image ERD is unreadable | List the parts that could not be read and mark them `[TBD]` |
 
-## 체크리스트 (보고 전)
-- [ ] `make erd P=<단위>` ✔ (또는 실패 코드 보고)
-- [ ] 모든 테이블이 모듈(viewpoint)에 속함
-- [ ] (migrations + ADR) 결정이 `.tbls.yml` `comments:` 에 기록되고 `make erd` 결과 문서에 보임
-- [ ] `[추정]` / `[TBD]` 목록을 보고에 포함
-- [ ] 출처 간 차이는 결정을 받았거나 미결로 표시
-- [ ] 보고는 `report-templates.md` 3번 양식
+## Checklist (before reporting)
+- [ ] `make erd P=<unit>` ✔ (or failure code reported)
+- [ ] Every table belongs to a module (viewpoint)
+- [ ] (migrations + ADR) decisions are recorded in `.tbls.yml` `comments:` and visible in the `make erd` output docs
+- [ ] The `[inferred]` / `[TBD]` list is included in the report
+- [ ] Differences between sources were decided or marked as open
+- [ ] The report follows `report-templates.md` §3
 
-## 관련 스킬
-- `/erd:design` — `[추정]`·`[TBD]` 를 대화로 확정, 이후 기능 추가 설계
-- `/erd:review` — 가져온 스키마를 코드와 대조 검토
-- `/erd:sync` — 이후 문서 유지·CI
+## Related skills
+- `/erd:design` — settle `[inferred]` / `[TBD]` items in conversation, then design further features
+- `/erd:review` — review the imported schema against the code
+- `/erd:sync` — doc maintenance and CI afterwards

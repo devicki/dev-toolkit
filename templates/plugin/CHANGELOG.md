@@ -1,4 +1,4 @@
-# __NAME__ 플러그인 변경 이력
+# __NAME__ plugin changelog
 
 ## 0.1.0
-- 최초 작성
+- Initial version

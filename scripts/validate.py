@@ -21,6 +21,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+HANGUL = re.compile("[\uac00-\ud7a3]")
+KO_ALLOWED = re.compile(r"\(`\[추정\]` in ko\)")   # 언어별 표기를 설명하는 줄
 DESC_MAX = 1024          # description 권장 상한 (목록에서 1,536자에서 잘림)
 SKILL_MD_MAX_LINES = 500 # SKILL.md 권장 상한 (자세한 내용은 참고 문서로)
 
@@ -121,6 +123,10 @@ def validate_plugin(entry: dict, base: str | None) -> None:
         check(len(desc) <= DESC_MAX, f"{label}: description {len(desc)}자 > {DESC_MAX} (상시 토큰 비용·잘림)", "warning")
         check("비활성" in desc or "not for" in desc.lower() or "→" in desc,
               f"{label}: description 에 비활성 조건(언제 쓰지 않는지·대신 쓸 스킬) 권장", "warning")
+        # 언어 규칙: 모델이 읽는 본문은 영어 (한국어는 description 의 트리거 예시에만)
+        body = text.split("\n---", 1)[-1] if text.startswith("---") else text
+        ko_lines = [i for i, line in enumerate(body.splitlines(), 1) if HANGUL.search(line) and not KO_ALLOWED.search(line)]
+        check(not ko_lines, f"{label}: 본문에 한국어 {len(ko_lines)}줄 — SKILL.md 본문은 영어로 (docs/skill-authoring.md '언어')", "warning")
         n = text.count("\n")
         check(n <= SKILL_MD_MAX_LINES, f"{label}: {n}줄 > {SKILL_MD_MAX_LINES} — 참고 문서로 분리 권장", "warning")
         # 경로 규칙: 플러그인 루트의 공용 파일은 ${CLAUDE_PLUGIN_ROOT} 로, 상위(..) 경로 금지

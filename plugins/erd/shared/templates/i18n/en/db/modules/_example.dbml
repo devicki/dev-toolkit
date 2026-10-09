@@ -1,0 +1,9 @@
+// Example module file (copy it, then delete this file)
+// use { table users } from './user'   // reference a table from another module
+
+Table example_items {
+  id bigint [pk, increment, note: 'PK']
+  name varchar(100) [not null, note: 'Name']
+  created_at timestamptz [not null, default: `now()`, note: 'Created at']
+  Note: 'Example table'
+}

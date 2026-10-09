@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# 레포 구조를 보고 ERD 단위(= DB 하나 = erd.env 하나)를 찾는다. (읽기 전용, 항상 exit 0)
-# 사용법: find-units.sh [--json] [시작 위치(기본: 현재 폴더)]
-# 출력: 레포 루트, 모노레포 단서, 기존 단위, 현재 위치의 대상 단위, 새 단위 후보, DB 없는 소스 폴더
+# Inspect the repo layout and find ERD units (unit = one DB = one erd.env). (Read-only, always exit 0)
+# Usage: find-units.sh [--json] [start location (default: current folder)]
+# Output: repo root, monorepo hints, existing units, target unit for current location, new unit candidates, source folders without a DB
 set -u
 set -f
 FMT=text; START_ARG="."
 while [ $# -gt 0 ]; do case "$1" in --json) FMT=json; shift;; *) START_ARG="$1"; shift;; esac; done
-# 물리 경로로 통일 (macOS: /var → /private/var 처럼 git 은 심볼릭 링크를 푼 경로를 돌려준다)
+# Normalize to physical paths (on macOS git returns symlink-resolved paths, e.g. /var → /private/var)
 START="$(cd "$START_ARG" 2>/dev/null && pwd -P || pwd -P)"
 ROOT="$(git -C "$START" rev-parse --show-toplevel 2>/dev/null || echo "$START")"
 ROOT="$(cd "$ROOT" && pwd -P)"
@@ -18,13 +18,13 @@ rel() { local p="${1#./}"; echo "${p:-.}"; }
 envval() { grep -h "^$2=" "$1/erd.env" 2>/dev/null | head -1 | cut -d= -f2- | sed "s/^'//; s/'\$//; s/^\"//; s/\"\$//"; }
 jstr() { printf '"%s"' "$(printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g')"; }
 
-# 마커 파일 → 그 파일을 소유한 패키지/서비스 루트(가장 가까운 매니페스트 폴더)로 올림
+# Marker file → walk up to the package/service root that owns it (nearest manifest folder)
 MANIFESTS="package.json pyproject.toml setup.py requirements.txt go.mod pom.xml build.gradle build.gradle.kts composer.json Gemfile Cargo.toml"
 pkg_root() {
   local d; d="$(dirname "$1")"
   while :; do
-    [ -f "$d/erd.env" ] && { rel "$d"; return; }                       # 이미 단위인 폴더
-    case "$(basename "$(dirname "$d")")" in apps|services|packages|modules) rel "$d"; return;; esac   # 워크스페이스 관례 폴더의 하위
+    [ -f "$d/erd.env" ] && { rel "$d"; return; }                       # folder that is already a unit
+    case "$(basename "$(dirname "$d")")" in apps|services|packages|modules) rel "$d"; return;; esac   # child of a conventional workspace folder
     for m in $MANIFESTS; do [ -f "$d/$m" ] && { rel "$d"; return; }; done
     [ -n "$(find "$d" -maxdepth 1 -name '*.csproj' -print -quit 2>/dev/null)" ] && { rel "$d"; return; }
     [ "$d" = "." ] && { echo "."; return; }
@@ -32,7 +32,7 @@ pkg_root() {
   done
 }
 
-# ── 수집 ─────────────────────────────────────────────
+# ── Collect ─────────────────────────────────────────────
 MONO_HINTS=""
 for m in pnpm-workspace.yaml turbo.json nx.json lerna.json rush.json go.work settings.gradle settings.gradle.kts; do
   [ -f "$m" ] && MONO_HINTS="$MONO_HINTS|$m"
@@ -45,7 +45,7 @@ DIR_HINTS=""
 for d in apps services packages modules backend frontend; do
   [ -d "$d" ] || continue
   n="$(find "$d" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')"
-  [ "$n" -ge 1 ] && DIR_HINTS="$DIR_HINTS|$d/ (${n}개 하위 폴더)"
+  [ "$n" -ge 1 ] && DIR_HINTS="$DIR_HINTS|$d/ (${n} subfolders)"
 done
 
 EXIST="$(ffind 8 -name erd.env -type f | sed 's#/erd.env$##' | sort)"
@@ -86,7 +86,7 @@ FRONT="$(for f in $(ffind 4 -type f -name package.json -exec grep -qE '"(react|v
 
 is_unit() { local u; for u in $EXIST; do [ "$(rel "$u")" = "$1" ] && return 0; done; return 1; }
 
-# ── 출력 ─────────────────────────────────────────────
+# ── Output ──────────────────────────────────────────────
 if [ "$FMT" = json ]; then
   printf '{"root":%s,"monorepo":%s,"monorepo_hints":[' "$(jstr "$ROOT")" "$([ $MONO = 1 ] && echo true || echo false)"
   first=1; IFS='|'; for h in ${MONO_HINTS#|}; do [ -z "$h" ] && continue; [ $first = 1 ] || printf ','; first=0; jstr "$h"; done; unset IFS
@@ -109,37 +109,37 @@ if [ "$FMT" = json ]; then
   exit 0
 fi
 
-echo "# ERD 단위 탐색"
-echo "레포 루트: $ROOT"
+echo "# ERD unit scan"
+echo "Repo root: $ROOT"
 echo
-echo "## 모노레포 단서"
+echo "## Monorepo hints"
 IFS='|'; for h in ${MONO_HINTS#|} ${DIR_HINTS#|}; do [ -n "$h" ] && echo "- $h"; done; unset IFS
-[ -z "$MONO_HINTS$DIR_HINTS" ] && echo "- 워크스페이스 설정 없음"
+[ -z "$MONO_HINTS$DIR_HINTS" ] && echo "- no workspace config"
 echo
-echo "## 기존 ERD 단위 (erd.env)"
+echo "## Existing ERD units (erd.env)"
 if [ -n "$EXIST" ]; then
   for u in $EXIST; do printf -- '- %-28s ERD_DIALECT=%s ERD_SOURCE=%s\n' "$(rel "$u")" "$(envval "$u" ERD_DIALECT)" "$(envval "$u" ERD_SOURCE)"; done
 else
-  echo "- 없음"
+  echo "- none"
 fi
 echo
-echo "## 현재 위치의 대상 단위"
+echo "## Target unit for current location"
 case "$REASON" in
-  nearest) echo "- $TARGET  (현재 위치에서 가장 가까운 erd.env)";;
-  only) echo "- $TARGET  (레포에 단위가 하나뿐)";;
-  none) echo "- 없음 (아직 세팅 전 → /erd:init)";;
-  ambiguous) echo "- 미정: 단위가 ${NEXIST}개 → 사용자에게 고르게 하거나 --project <폴더> 로 지정";;
+  nearest) echo "- $TARGET  (nearest erd.env)";;
+  only) echo "- $TARGET  (only unit in repo)";;
+  none) echo "- none (not set up yet → /erd:init)";;
+  ambiguous) echo "- undecided: ${NEXIST} units → ask the user or pass --project <folder>";;
 esac
 echo
-echo "## 새 단위 후보 (DB 스키마 단서가 있는 서비스 폴더)"
+echo "## New unit candidates (service folders with DB schema hints)"
 if [ -n "$CAND_LINES" ]; then
   printf '%s\n' "$CAND_LINES" | while IFS='|' read -r dir tools; do
-    printf -- '- %-28s %s%s\n' "$dir" "$tools" "$(is_unit "$dir" && echo '  ← 이미 단위')"
+    printf -- '- %-28s %s%s\n' "$dir" "$tools" "$(is_unit "$dir" && echo '  ← already a unit')"
   done
 else
-  echo "- 스키마 단서 없음 (신규 설계라면 레포 루트 또는 백엔드 폴더 하나를 단위로)"
+  echo "- no schema hints (for a new design, use the repo root or one backend folder as the unit)"
 fi
 echo
-echo "## DB 없는 소스 폴더 (참고용: 화면·API)"
-if [ -n "$FRONT" ]; then for f in $FRONT; do echo "- $f  (프론트엔드)"; done; else echo "- 없음"; fi
+echo "## Source folders without a DB (reference: UI/API)"
+if [ -n "$FRONT" ]; then for f in $FRONT; do echo "- $f  (frontend)"; done; else echo "- none"; fi
 exit 0

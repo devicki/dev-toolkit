@@ -1,33 +1,33 @@
-# 스키마 원본(Source of Truth) 결정
+# Choosing the schema source of truth
 
-> 기준: erd 플러그인 0.3.1 — 2026-10.
+> Baseline: erd plugin 0.4.0 — 2026-10.
 
-ERD 작업을 시작하기 전에 **무엇이 스키마의 원본인지**부터 정한다. 원본이 둘이면 서로를 덮어쓰며 어긋난다.
-결정 결과는 ERD 단위 폴더의 `erd.env` 의 `ERD_SOURCE` 에 기록한다 (단위마다 다를 수 있다, `units.md`).
+Before starting any ERD work, first decide **what the schema's source of truth is**. With two sources of truth, they overwrite each other and drift apart.
+Record the decision in `ERD_SOURCE` in the ERD unit folder's `erd.env` (it can differ per unit, `units.md`).
 
-## 결정표
+## Decision table
 
-| 프로젝트 상태 | ERD_SOURCE | 원본 | DBML의 역할 | 스키마 변경 흐름 |
+| Project state | ERD_SOURCE | Source of truth | Role of DBML | Schema change flow |
 |---|---|---|---|---|
-| 신규, 마이그레이션 도구 없음 | `dbml` | `db/modules/*.dbml` | 설계 원본 | DBML 수정 → `make erd` → (DB 반영 시) 마이그레이션 SQL 생성 |
-| ORM/마이그레이션 도구 있음 | `migrations` | ORM 모델 + 마이그레이션 | 파생 문서 (`db/schema.generated.dbml`) | 모델 수정 → 마이그레이션 생성(기존 도구) → `make erd` |
-| 화면·API 소스만 있음 (DB 미구현) | `dbml` | 추출한 초안 DBML → 사용자 확정 후 원본 | 설계 원본 | 신규와 동일 |
-| ERD·ADR 문서만 있음 | `dbml` | 문서 → DBML 이관 후 DBML이 원본 | 설계 원본 | 신규와 동일. 원 문서에는 "DBML로 이관됨" 표시 권장 |
-| 운영 DB만 있음 (코드에 스키마 없음) | `dbml` | `db2dbml` 로 추출한 DBML | 설계 원본 | 이후 변경은 DBML → 마이그레이션 |
+| New, no migration tool | `dbml` | `db/modules/*.dbml` | Design source of truth | Edit DBML → `make erd` → (when applying to a DB) generate migration SQL |
+| Has ORM/migration tool | `migrations` | ORM models + migrations | Derived document (`db/schema.generated.dbml`) | Edit models → generate migration (existing tool) → `make erd` |
+| Only UI/API sources (DB not implemented) | `dbml` | Extracted draft DBML → source of truth once the user confirms | Design source of truth | Same as new |
+| Only ERD/ADR documents | `dbml` | Documents → migrated to DBML, then DBML is the source of truth | Design source of truth | Same as new. Recommended: mark the original documents "migrated to DBML" |
+| Only a production DB (no schema in code) | `dbml` | DBML extracted with `db2dbml` | Design source of truth | Subsequent changes: DBML → migration |
 
-## 판단 규칙
+## Decision rules
 
-1. `detect-project.sh <단위 폴더>` 결과에 마이그레이션 도구가 있으면 **기본값은 `migrations`**.
-   - 단, 마이그레이션이 사실상 버려진 상태(최근 커밋 없음, 실제 DB와 크게 다름)라면 사용자에게 확인한다.
-2. 마이그레이션 도구가 없고 DBML도 없으면 `dbml`.
-3. `migrations` 인데 사용자가 "DBML로 먼저 설계하고 싶다"고 하면:
-   - DBML은 **설계 제안서**로 쓴다(`db/proposals/<이름>.dbml`).
-   - 확정되면 ORM 모델·마이그레이션에 반영하고, 문서는 `make erd` 로 다시 생성한다.
-   - DBML을 원본으로 바꾸는 것은 팀 합의가 필요한 결정이므로 사용자 확인 없이 하지 않는다.
-4. 판단이 애매하면 결정표를 보여 주고 사용자에게 고르게 한다.
+1. If the `detect-project.sh <unit folder>` output shows a migration tool, **the default is `migrations`**.
+   - However, if the migrations are effectively abandoned (no recent commits, far from the actual DB), confirm with the user.
+2. No migration tool and no DBML → `dbml`.
+3. If it is `migrations` and the user says "I want to design in DBML first":
+   - Use DBML as a **design proposal** (`db/proposals/<name>.dbml`).
+   - Once confirmed, apply it to the ORM models/migrations and regenerate the docs with `make erd`.
+   - Switching the source of truth to DBML is a decision that needs team agreement; do not do it without the user's confirmation.
+4. If the decision is unclear, show the Decision table and let the user choose.
 
-## 원본별 금지 사항
+## Prohibited per source of truth
 
-- `dbml`: `docs/schema/`, `db/schema.sql` 을 직접 수정하지 않는다.
-- `migrations`: `db/schema.generated.dbml` 을 손으로 고치지 않는다(다음 `make erd` 에서 덮어써짐). 이미 적용된 마이그레이션 파일을 수정하지 않는다.
-- `migrations` + ADR 문서: 원본은 그대로 ORM. ADR 결정·설명은 `.tbls.yml` `comments:`(문서 전용 주석·라벨)로 연결한다. DB 주석으로 남기고 싶으면 ORM `comment=` + 새 마이그레이션을 별도 제안.
+- `dbml`: do not edit `docs/schema/` or `db/schema.sql` directly.
+- `migrations`: do not hand-edit `db/schema.generated.dbml` (overwritten by the next `make erd`). Do not edit migration files that have already been applied.
+- `migrations` + ADR documents: the source of truth stays the ORM. Link ADR decisions/explanations via `.tbls.yml` `comments:` (doc-only comments and labels). If they should also live as DB comments, propose ORM `comment=` + a new migration separately.
