@@ -38,7 +38,7 @@ case "$SOURCE" in dbml|migrations) ;; *) echo "✘ --source 는 dbml|migrations"
 printf '%s' "$NAME" | grep -Eq '^[A-Za-z0-9_-]+$' || { echo "✘ --name 은 영문·숫자·_·- 만 사용" >&2; exit 2; }
 
 ROOT="${ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
-ROOT="$(cd "$ROOT" && pwd)"
+ROOT="$(cd "$ROOT" && pwd -P)"
 UNIT="${UNIT%/}"; UNIT="${UNIT#./}"; [ -z "$UNIT" ] && UNIT="."
 U="$ROOT/$UNIT"
 WARN=0
@@ -90,7 +90,7 @@ if [ -f "$ROOT/.gitignore" ] && grep -qx 'dbml-error.log' "$ROOT/.gitignore"; th
 else [ $DRY = 1 ] || printf 'dbml-error.log\n' >> "$ROOT/.gitignore"; say "~" "$ROOT/.gitignore" "dbml-error.log 추가"; fi
 
 # ── 단위 폴더 ────────────────────────────────────────
-shq() { local v="$1"; printf "'%s'" "${v//\'/\'\\\'\'}"; }   # 셸용 작은따옴표 인용
+shq() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"; }   # 셸용 작은따옴표 인용 (bash 3.2 의 ${v//} 따옴표 처리 차이를 피해 sed 사용)
 if [ -e "$U/erd.env" ]; then
   say "=" "$U/erd.env" "이미 있음, 유지 — 값 변경은 직접 편집"
 else
