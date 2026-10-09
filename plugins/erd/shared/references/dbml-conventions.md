@@ -1,5 +1,8 @@
 # DBML 작성 규칙
 
+> 기준: DBML 문법(@dbml/cli 10.3, 모듈 시스템 `use`/`reuse` 포함) — https://dbml.dbdiagram.io/docs/ , 2026-10 확인.
+> 프로젝트에 이미 규칙이 있으면 그 규칙이 우선한다.
+
 문법 전체: https://dbml.dbdiagram.io/docs/  (모듈 시스템: https://dbml.dbdiagram.io/syntax/module-system)
 
 ## 파일 구조
@@ -38,6 +41,23 @@ user_id bigint [not null, note: '회원 ID → api: users.id (다른 DB, FK 없�
 | 일시 | `_at` 접미사, 날짜만이면 `_on` / `_date` | `paid_at` |
 
 프로젝트에 이미 다른 규칙이 있으면(기존 테이블, ORM 설정) **기존 규칙을 따른다**. 새 규칙을 강요하지 않는다.
+
+## 한번 정하면 바꾸기 비싼 것 (설계 단계에서 먼저 확정)
+
+- 테이블·컬럼 이름 — 운영 데이터가 생기면 rename 마이그레이션 + 코드 전체 수정이 필요
+- 모듈 id (= `db/modules/<id>.dbml` 파일명 = `.tbls.yml` viewpoint id = 문서 파일명 `viewpoint-<id>.md`)
+- PK 전략 (bigint 증가 / UUID) 과 테넌트 키 유무
+- 상태값의 의미 (값 추가는 쉽지만 의미 변경은 데이터 이관이 필요)
+
+## 규모 감각
+
+| 대상 | 보통 | 점검 신호 |
+|---|---|---|
+| 모듈당 테이블 | 3~15개 | 30개 초과 → 모듈 분할 검토, 1~2개 → 인접 모듈과 합치기 검토 |
+| 테이블당 컬럼 | 5~30개 | 50개 초과 → 성격이 다른 컬럼 그룹 분리 검토 (lint `columnCount` 로 강제 가능) |
+| 단위(DB)당 모듈 | 3~12개 | 20개 초과 → 단위(서비스) 분리 여부를 아키텍처 관점에서 검토 |
+
+벗어난다고 틀린 것은 아니다. 신호가 보이면 사용자에게 한 번 확인한다.
 
 ## 필수 사항 (tbls lint 가 검사)
 

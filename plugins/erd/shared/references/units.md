@@ -1,5 +1,7 @@
 # ERD 단위와 모노레포
 
+> 기준: erd 플러그인 0.3.0 — 2026-10.
+
 ## 개념
 
 **ERD 단위 = DB(스키마) 하나 = `erd.env` 가 있는 폴더 하나.**
@@ -65,4 +67,4 @@ ERD_RELATED_SOURCES='apps/web,apps/admin'
 ## CI
 
 루트에서 `make erd-check` 는 모든 단위를 검사하고 하나라도 다르면 실패한다.
-변경된 단위만 검사하려면 CI 에서 변경 경로로 `P=` 를 넘긴다(선택).
+PR 에서는 `make erd-check-changed BASE=origin/<기본 브랜치>` 로 **스키마가 바뀐 단위만** 검사할 수 있다 (`scripts/erd-changed.sh` 가 원격 기준 브랜치 대비 커밋·미커밋·새 파일을 단위별로 묶음).
