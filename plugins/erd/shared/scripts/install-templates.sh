@@ -142,19 +142,25 @@ agent_file() { # CLAUDE.md 우선, 없고 AGENTS.md 만 있으면 그것
   if [ -f "$1/CLAUDE.md" ] || [ ! -f "$1/AGENTS.md" ]; then echo "$1/CLAUDE.md"; else echo "$1/AGENTS.md"; fi
 }
 P_ARG=$([ "$UNIT" = "." ] && echo "" || echo " P=$UNIT")
+TABLE_DOC=$([ "$DIALECT" = "mysql" ] && echo "<테이블>.md" || echo "public.<테이블>.md")
 if [ "$SOURCE" = "dbml" ]; then
   ORIGIN="db/modules/*.dbml (DBML 이 설계 원본)"
   GEN="db/schema.sql, docs/schema/"
+  OVERVIEW="db/schema.dbml(+ db/modules/)"
+  NOTE_LINE="- 테이블·컬럼 설명과 ADR 참조는 DBML note 에 쓴다."
 else
   ORIGIN="ORM 모델·마이그레이션 (\`$MIGRATE_CMD\`). DBML(db/schema.generated.dbml)은 파생물"
   GEN="db/schema.generated.dbml, docs/schema/"
+  OVERVIEW="db/schema.generated.dbml"
+  NOTE_LINE="- 테이블·컬럼 설명과 ADR 참조는 .tbls.yml 의 comments: 에 쓴다 (생성물·ORM 코드 대신)."
 fi
 UNIT_BLOCK="$(cat <<EOF
 ## DB 스키마 (erd 플러그인)
 - 이 폴더는 ERD 단위다 (\`erd.env\`, $DIALECT). 스키마 원본: $ORIGIN.
 - 스키마를 바꾸면 레포 루트에서 \`make erd$P_ARG\` 로 docs/schema 를 갱신하고 같은 커밋에 포함한다.
 - 생성물은 직접 수정하지 않는다: $GEN.
-- 구조 파악: docs/schema/README.md, 모듈별 docs/schema/viewpoint-*.md, 기계용 docs/schema/schema.json.
+- 테이블·컬럼·관계를 참조하는 작업(쿼리·모델·API/DTO·마이그레이션·화면 폼) 전에 확인: 전체 개요 $OVERVIEW → 모듈 docs/schema/viewpoint-*.md → 테이블 docs/schema/$TABLE_DOC (컬럼·제약·인덱스·관계·ADR 라벨). 추측으로 컬럼을 만들지 않는다.
+$NOTE_LINE
 - 설계·수정 /erd:design, 검토 /erd:review, 동기화 /erd:sync.
 EOF
 )"

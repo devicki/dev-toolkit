@@ -51,6 +51,7 @@ allowed-tools:
 1. `make erd P=<단위>` (원본은 마이그레이션). 실패하면 `ERD_EXIT` 로 `errors.md`.
 2. 마이그레이션이 없거나 실행 불가면 모델 코드를 읽어 DBML 초안 — "코드에서 추론한 초안"이라고 명시, 불확실한 값은 `[추정]`.
 3. 모델 ↔ 생성 결과 차이(모델엔 있는데 마이그레이션에 없는 필드 등)를 보고.
+4. ADR·설계 문서가 있으면 docs 모드 2번으로 이어서 `.tbls.yml` `comments:` 에 결정을 연결한다.
 
 ### db
 1. 접속 정보는 사용자에게 받는다. **읽기 전용 계정 권장**, 운영 DB 면 한 번 더 확인.
@@ -74,7 +75,10 @@ allowed-tools:
 
 ### docs
 1. 형식별로 읽는다: Markdown/텍스트 표, 이미지 ERD(내용을 읽어 옮김), SQL/DBML 내보내기(`sql2dbml` — 읽기 전용 변환이라 R1 예외), 엑셀 테이블 정의서.
-2. ADR 은 스키마에 영향을 주는 **결정**(소프트 삭제, 멀티테넌트, ID 전략)을 뽑아 Project/테이블 Note 에 `ADR-xxx` 참조.
+2. ADR 은 스키마에 영향을 주는 **결정**(소프트 삭제, 멀티테넌트, ID 전략)을 뽑아 `ADR 결정 | 영향 테이블·컬럼 | 스키마와 일치?` 표로 먼저 보여 준다. 기록 위치는 `ERD_SOURCE` 로 정한다:
+   - `dbml` → 해당 테이블·컬럼 note / Project Note 에 `ADR-xxx` 참조.
+   - `migrations` → **`.tbls.yml` 의 `comments:`** (`tableComment`·`columnComments`·`labels: [ADR-xxx]`). 파생 DBML(`schema.generated.dbml`)·ORM 코드는 건드리지 않는다. 작성 규칙은 `tbls-guide.md` "comments" 절 — **설정의 comment 는 DB 주석을 대체**하므로 기존 주석(`docs/schema/<table>.md`)을 앞에 살려 쓴다.
+   - 스키마와 어긋나는 ADR 은 기록하지 말고 차이로 보고한다 (강제 규칙 3).
 3. 이관 후 원 문서에 "DBML(db/modules)로 이관됨" 표시를 제안 (수정은 승인 후).
 
 ### augment
@@ -106,6 +110,7 @@ allowed-tools:
 ## 체크리스트 (보고 전)
 - [ ] `make erd P=<단위>` ✔ (또는 실패 코드 보고)
 - [ ] 모든 테이블이 모듈(viewpoint)에 속함
+- [ ] (migrations + ADR) 결정이 `.tbls.yml` `comments:` 에 기록되고 `make erd` 결과 문서에 보임
 - [ ] `[추정]` / `[TBD]` 목록을 보고에 포함
 - [ ] 출처 간 차이는 결정을 받았거나 미결로 표시
 - [ ] 보고는 `report-templates.md` 3번 양식

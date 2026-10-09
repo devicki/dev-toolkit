@@ -1,6 +1,6 @@
 # 스키마 원본(Source of Truth) 결정
 
-> 기준: erd 플러그인 0.3.0 — 2026-10.
+> 기준: erd 플러그인 0.3.1 — 2026-10.
 
 ERD 작업을 시작하기 전에 **무엇이 스키마의 원본인지**부터 정한다. 원본이 둘이면 서로를 덮어쓰며 어긋난다.
 결정 결과는 ERD 단위 폴더의 `erd.env` 의 `ERD_SOURCE` 에 기록한다 (단위마다 다를 수 있다, `units.md`).
@@ -30,3 +30,4 @@ ERD 작업을 시작하기 전에 **무엇이 스키마의 원본인지**부터 
 
 - `dbml`: `docs/schema/`, `db/schema.sql` 을 직접 수정하지 않는다.
 - `migrations`: `db/schema.generated.dbml` 을 손으로 고치지 않는다(다음 `make erd` 에서 덮어써짐). 이미 적용된 마이그레이션 파일을 수정하지 않는다.
+- `migrations` + ADR 문서: 원본은 그대로 ORM. ADR 결정·설명은 `.tbls.yml` `comments:`(문서 전용 주석·라벨)로 연결한다. DB 주석으로 남기고 싶으면 ORM `comment=` + 새 마이그레이션을 별도 제안.

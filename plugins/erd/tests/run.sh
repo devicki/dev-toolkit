@@ -63,6 +63,20 @@ dbml_module() { # dbml_module <단위> <모듈> <테이블...>
   grep -q "modules/$m'" "$u/db/schema.dbml" || echo "use * from './modules/$m'" >> "$u/db/schema.dbml"
 }
 
+# 마이그레이션 실행기: psql 이 없으면(예: macOS + Docker Desktop) 컨테이너 안의 psql 로 호스트 포트에 접속
+write_migrate_sh() { # write_migrate_sh <단위 폴더>  (그 안의 migrations/*.sql 을 순서대로 적용)
+  cat > "$1/migrate.sh" <<'SH'
+#!/usr/bin/env bash
+set -e
+for f in migrations/*.sql; do
+  if command -v psql >/dev/null 2>&1; then psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f "$f"
+  else u="$(printf '%s' "$DATABASE_URL" | sed -E 's#@(127\.0\.0\.1|localhost):#@host.docker.internal:#')"
+       docker run --rm -i --add-host=host.docker.internal:host-gateway postgres:16 psql "$u" -q -v ON_ERROR_STOP=1 < "$f"; fi
+done
+SH
+  chmod +x "$1/migrate.sh"
+}
+
 # ── 시나리오 ─────────────────────────────────────────
 test_inject_block_idempotent() {
   local f="$WORK/ib/CLAUDE.md"; mkdir -p "$WORK/ib"; printf '# P\n' > "$f"
@@ -93,6 +107,7 @@ test_install_templates_quoting_and_agents_md() {
   ( set -a; . apps/pay/erd.env; [ "$ERD_MIGRATE_CMD" = "for f in m/*.sql; do echo 'it''s' \"\$f\" | grep -c x & done" ] )
   grep -q 'erd:unit:start' apps/pay/AGENTS.md; [ ! -e apps/pay/CLAUDE.md ]
   grep -q '_prisma_migrations' apps/pay/.tbls.yml
+  grep -q 'docs/schema/<테이블>.md' apps/pay/AGENTS.md   # MySQL 은 스키마 접두사 없음
   assert_eq "$(rc_of bash "$SCRIPTS/install-templates.sh" --unit x --name 'bad name' --dialect postgres --source dbml)" 2
 }
 
@@ -137,17 +152,7 @@ test_exit_code_tempdb() {
 
 test_monorepo_units() {
   local r; r="$(new_repo mono)"; cd "$r"; mkdir -p apps/api apps/pay/migrations apps/web
-  # 마이그레이션 실행기: psql 이 없으면(예: macOS + Docker Desktop) 컨테이너 안의 psql 로 호스트 포트에 접속
-  cat > apps/pay/migrate.sh <<'SH'
-#!/usr/bin/env bash
-set -e
-for f in migrations/*.sql; do
-  if command -v psql >/dev/null 2>&1; then psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f "$f"
-  else u="$(printf '%s' "$DATABASE_URL" | sed -E 's#@(127\.0\.0\.1|localhost):#@host.docker.internal:#')"
-       docker run --rm -i --add-host=host.docker.internal:host-gateway postgres:16 psql "$u" -q -v ON_ERROR_STOP=1 < "$f"; fi
-done
-SH
-  chmod +x apps/pay/migrate.sh
+  write_migrate_sh apps/pay
   echo '{"workspaces":["apps/*"]}' > package.json; echo '{"dependencies":{"react":"18"}}' > apps/web/package.json
   install_unit --unit apps/api --name api --dialect postgres --source dbml --related apps/web
   dbml_module apps/api user users
@@ -165,6 +170,31 @@ SH
   local j; j="$(bash "$SCRIPTS/find-units.sh" --json)"
   assert_has "$j" '"monorepo":true'; assert_has "$j" '"frontends":\["apps/web"\]'
   assert_has "$(cd apps/api && bash "$SCRIPTS/find-units.sh" --json)" '"target":"apps/api"'
+}
+
+test_migrations_tbls_comments() {
+  local r; r="$(new_repo mc)"; cd "$r"; mkdir -p migrations
+  write_migrate_sh .
+  printf "CREATE TABLE users (id serial primary key, deleted_at timestamptz);\nCOMMENT ON TABLE users IS '회원';COMMENT ON COLUMN users.id IS 'PK';\n" > migrations/001.sql
+  install_unit --unit . --name mc --dialect postgres --source migrations --migrate-cmd './migrate.sh'
+  grep -q '.tbls.yml 의 comments:' CLAUDE.md; grep -q 'docs/schema/public.<테이블>.md' CLAUDE.md
+  cat >> .tbls.yml <<'Y'
+comments:
+  - table: users
+    tableComment: "회원. ADR-003: 소프트 삭제"
+    columnComments:
+      deleted_at: "삭제 시각, NULL=활성 (ADR-003)"
+    labels: [ADR-003]
+Y
+  assert_eq "$(rc_of make erd)" 0 "$(out)"
+  grep -q '회원. ADR-003' docs/schema/public.users.md
+  grep -q 'NULL=활성 (ADR-003)' docs/schema/public.users.md
+  grep -q '`ADR-003`' docs/schema/README.md          # 라벨 → 목록에서 ADR 별 검색
+  assert_eq "$(rc_of make erd-check)" 0 "$(out)"
+  ! out | grep -q 'comment required' || { echo "설정 주석이 lint 에서 인정되지 않음"; out | tail; return 1; }
+  sed -i.bak 's/NULL=활성/NULL=사용 중/' .tbls.yml && rm -f .tbls.yml.bak
+  assert_eq "$(rc_of scripts/erd-doc.sh check)" 1 "주석만 바꾸고 문서를 안 갱신하면 차이로 잡아야 함: $(out | tail -3)"
+  assert_has "$(out)" "ERD_EXIT=1 diff"
 }
 
 test_changed_units() {
@@ -210,6 +240,7 @@ t "changed-units 분류·기준 ref"        test_changed_units
 t "단일 레포 doc·check·drift"          test_single_doc_check_drift   db
 t "종료 코드 2·3·4·6·7·8"              test_exit_codes               db
 t "종료 코드 5 (임시 DB 접속 실패)"     test_exit_code_tempdb         tools
+t "migrations 단위 .tbls.yml comments(ADR)" test_migrations_tbls_comments db
 t "모노레포 단위·대상 인식"            test_monorepo_units           db
 t "erd-check-changed"                  test_changed_check_target     db
 echo
