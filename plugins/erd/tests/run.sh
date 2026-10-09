@@ -131,14 +131,24 @@ test_exit_code_tempdb() {
 }
 
 test_monorepo_units() {
-  have psql || { echo "psql 필요"; return 1; }
   local r; r="$(new_repo mono)"; cd "$r"; mkdir -p apps/api apps/pay/migrations apps/web
+  # 마이그레이션 실행기: psql 이 없으면(예: macOS + Docker Desktop) 컨테이너 안의 psql 로 호스트 포트에 접속
+  cat > apps/pay/migrate.sh <<'SH'
+#!/usr/bin/env bash
+set -e
+for f in migrations/*.sql; do
+  if command -v psql >/dev/null 2>&1; then psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f "$f"
+  else u="$(printf '%s' "$DATABASE_URL" | sed -E 's#@(127\.0\.0\.1|localhost):#@host.docker.internal:#')"
+       docker run --rm -i --add-host=host.docker.internal:host-gateway postgres:16 psql "$u" -q -v ON_ERROR_STOP=1 < "$f"; fi
+done
+SH
+  chmod +x apps/pay/migrate.sh
   echo '{"workspaces":["apps/*"]}' > package.json; echo '{"dependencies":{"react":"18"}}' > apps/web/package.json
   install_unit --unit apps/api --name api --dialect postgres --source dbml --related apps/web
   dbml_module apps/api user users
   printf "CREATE TABLE invoices (id serial primary key);\nCOMMENT ON TABLE invoices IS '청구';COMMENT ON COLUMN invoices.id IS 'PK';\n" > apps/pay/migrations/001.sql
   install_unit --unit apps/pay --name pay --dialect postgres --source migrations \
-    --migrate-cmd 'for f in migrations/*.sql; do psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f "$f"; done'
+    --migrate-cmd './migrate.sh'
   assert_eq "$(rc_of make erd)" 0 "$(out)"
   assert_has "$(out)" "ERD 단위: apps/api"; assert_has "$(out)" "ERD 단위: apps/pay"
   [ -f apps/pay/db/schema.generated.dbml ]

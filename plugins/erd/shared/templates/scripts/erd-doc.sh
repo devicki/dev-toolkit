@@ -54,7 +54,8 @@ else
        fail 2 usage "단위 폴더를 지정하세요. 예: scripts/erd-doc.sh $MODE <단위 폴더>  또는  make erd P=<단위 폴더>" ;;
   esac
 fi
-UNIT_REL="$(realpath --relative-to="$REPO_ROOT" "$PWD" 2>/dev/null || python3 -c 'import os,sys;print(os.path.relpath(sys.argv[1],sys.argv[2]))' "$PWD" "$REPO_ROOT")"
+# 레포 루트 기준 상대 경로 (GNU realpath·python 없이: macOS 기본 환경 호환)
+case "$PWD" in "$REPO_ROOT") UNIT_REL=".";; "$REPO_ROOT"/*) UNIT_REL="${PWD#"$REPO_ROOT"/}";; *) UNIT_REL="$PWD";; esac
 echo "■ ERD 단위: $UNIT_REL"
 
 # ── 설정 (단위 폴더 기준 상대 경로) ──────────────────
@@ -67,7 +68,7 @@ ERD_MIGRATE_CMD="${ERD_MIGRATE_CMD:-}"           # ERD_SOURCE=migrations 일 때
 ERD_DERIVED_DBML="${ERD_DERIVED_DBML:-db/schema.generated.dbml}"
 ERD_DOCKER_IMAGE="${ERD_DOCKER_IMAGE:-}"
 # 단위마다 임시 DB 이름을 다르게 (같은 서버를 써도 충돌하지 않도록)
-SLUG="$(printf '%s' "$UNIT_REL" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '_' | sed 's/_\+/_/g; s/^_//; s/_$//' | cut -c1-40)"
+SLUG="$(printf '%s' "$UNIT_REL" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '_' | sed -E 's/_+/_/g; s/^_//; s/_$//' | cut -c1-40)"
 DOC_DB="erd_doc${SLUG:+_$SLUG}"
 
 case "$MODE" in doc|check|sql) ;; *) fail 2 usage "모드는 doc|check|sql 중 하나입니다: $MODE";; esac
