@@ -6,8 +6,10 @@ set -u
 set -f
 FMT=text; START_ARG="."
 while [ $# -gt 0 ]; do case "$1" in --json) FMT=json; shift;; *) START_ARG="$1"; shift;; esac; done
-START="$(cd "$START_ARG" 2>/dev/null && pwd || pwd)"
+# 물리 경로로 통일 (macOS: /var → /private/var 처럼 git 은 심볼릭 링크를 푼 경로를 돌려준다)
+START="$(cd "$START_ARG" 2>/dev/null && pwd -P || pwd -P)"
 ROOT="$(git -C "$START" rev-parse --show-toplevel 2>/dev/null || echo "$START")"
+ROOT="$(cd "$ROOT" && pwd -P)"
 cd "$ROOT" || exit 0
 
 PRUNE='-name node_modules -o -name .git -o -name vendor -o -name .venv -o -name venv -o -name dist -o -name build -o -name target -o -name .next -o -name .turbo'

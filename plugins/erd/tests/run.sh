@@ -127,7 +127,12 @@ test_exit_codes() {
 test_exit_code_tempdb() {
   local r; r="$(new_repo et)"; cd "$r"
   install_unit --unit . --name et --dialect postgres --source dbml; dbml_module . core a
-  assert_eq "$(rc_of env PG=postgres://nobody@127.0.0.1:1 scripts/erd-doc.sh doc)" 5
+  if have psql; then
+    assert_eq "$(rc_of env PG=postgres://nobody@127.0.0.1:1 scripts/erd-doc.sh doc)" 5 "$(out)"
+  else  # PG= 모드는 psql 이 필요하다 → 도구 없음(3)으로 안내해야 한다
+    assert_eq "$(rc_of env PG=postgres://nobody@127.0.0.1:1 scripts/erd-doc.sh doc)" 3 "$(out)"
+    assert_has "$(out)" "psql"
+  fi
 }
 
 test_monorepo_units() {

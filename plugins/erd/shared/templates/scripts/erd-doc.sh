@@ -24,8 +24,8 @@ fail() { # fail <코드> <분류> <메시지...>
 }
 MODE="${1:-doc}"
 UNIT_ARG="${2:-}"
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd -P)"   # 물리 경로로 통일 (macOS /var ↔ /private/var)
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd -P)"
 
 # ── 대상 ERD 단위 결정 ───────────────────────────────
 find_up() {
@@ -43,7 +43,7 @@ list_units() {
 if [ -n "$UNIT_ARG" ]; then
   [ -d "$UNIT_ARG" ] || fail 2 usage "단위 폴더가 없습니다: $UNIT_ARG"
   cd "$UNIT_ARG"
-elif UNIT_DIR="$(find_up "$PWD")"; then
+elif UNIT_DIR="$(find_up "$(pwd -P)")"; then
   cd "$UNIT_DIR"
 else
   UNITS="$(list_units)"
@@ -55,7 +55,8 @@ else
   esac
 fi
 # 레포 루트 기준 상대 경로 (GNU realpath·python 없이: macOS 기본 환경 호환)
-case "$PWD" in "$REPO_ROOT") UNIT_REL=".";; "$REPO_ROOT"/*) UNIT_REL="${PWD#"$REPO_ROOT"/}";; *) UNIT_REL="$PWD";; esac
+HERE="$(pwd -P)"
+case "$HERE" in "$REPO_ROOT") UNIT_REL=".";; "$REPO_ROOT"/*) UNIT_REL="${HERE#"$REPO_ROOT"/}";; *) UNIT_REL="$HERE";; esac
 echo "■ ERD 단위: $UNIT_REL"
 
 # ── 설정 (단위 폴더 기준 상대 경로) ──────────────────
@@ -136,7 +137,7 @@ mysql_args() { # mysql://user:pass@host:port → mysql CLI 인자
 mysql_exec() { mysql $(mysql_args) -e "$1"; }
 
 if [ "$ERD_DIALECT" = "postgres" ] && [ -n "${PG:-}" ]; then
-  need psql
+  command -v psql >/dev/null 2>&1 || fail 3 missing-tool "PG= 로 기존 서버를 쓰려면 psql 이 필요합니다. psql 이 없으면 PG 없이 실행해 Docker 임시 DB 를 쓰세요."
   echo "▶ 기존 PostgreSQL 서버에 임시 DB($DOC_DB) 생성"
   psql "$PG/postgres" -qc "select 1" >/dev/null 2>&1 || fail 5 tempdb "PostgreSQL 서버 접속 실패: ${PG%%@*}@… (주소·계정·비밀번호 확인)"
   psql "$PG/postgres" -qc "DROP DATABASE IF EXISTS $DOC_DB" >/dev/null 2>&1 || true
