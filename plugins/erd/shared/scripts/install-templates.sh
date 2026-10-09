@@ -66,7 +66,8 @@ render() { # render <템플릿 상대경로> <대상> <sed 식...>
   local src="$TPL/$1" dst="$2"; shift 2
   if [ -e "$dst" ]; then say "=" "$dst" "이미 있음, 유지"; return; fi
   do_ mkdir -p "$(dirname "$dst")"
-  if [ $DRY = 0 ]; then sed "$@" "$src" > "$dst"; fi
+  # 치환식이 없으면 그대로 복사 (sed 에 식 없이 파일만 주면 파일을 스크립트로 읽고 stdin 을 기다린다)
+  if [ $DRY = 0 ]; then if [ $# -eq 0 ]; then cp "$src" "$dst"; else sed "$@" "$src" > "$dst"; fi; fi
   say "+" "$dst"
 }
 
