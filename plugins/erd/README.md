@@ -14,7 +14,18 @@ Alembic·Prisma·Flyway 등 기존 마이그레이션 도구가 있는 프로젝
 | `/erd:review` | 백엔드·프론트 소스와 대조한 검토, 심각도별 개선안 |
 | `/erd:sync` | 문서 갱신, drift 점검, 마이그레이션 생성 연동, CI 검사 |
 
-자연어로 요청해도 맞는 스킬이 선택됩니다 (예: "주문 기능에 필요한 테이블 설계해줘").
+자연어로 요청해도 맞는 스킬이 선택됩니다 (예: "주문 기능에 필요한 테이블 설계해줘"). 스킬 설명에 "쓰지 않을 때"가 적혀 있어 비슷한 요청끼리 서로 가로채지 않습니다.
+
+## make 명령 (레포 루트)
+
+| 명령 | 용도 |
+|---|---|
+| `make erd [P=<단위>]` | 문서 생성 + lint |
+| `make erd-check [P=<단위>]` | 문서 최신 여부 (CI) |
+| `make erd-check-changed [BASE=origin/main]` | 기준 브랜치 대비 스키마가 바뀐 단위만 검사 (PR) |
+| `make erd-sql`, `make erd-list`, `make erd-view` | DBML→SQL, 단위 목록, 터미널 보기 |
+
+실패하면 마지막 줄에 `ERD_EXIT=<코드> <분류>` 가 찍힙니다 — 코드표는 [shared/references/errors.md](shared/references/errors.md).
 
 ## 프로젝트에 생기는 파일
 
@@ -22,6 +33,7 @@ Alembic·Prisma·Flyway 등 기존 마이그레이션 도구가 있는 프로젝
 # 레포 루트 (하나)
 erd.mk                   # make erd / erd-check / erd-sql / erd-list / erd-view  [P=<단위>]
 scripts/erd-doc.sh       # (DBML|마이그레이션) → 임시 DB → tbls 문서
+scripts/erd-changed.sh   # 기준 브랜치 대비 바뀐 단위 탐지
 docs/ERD_GUIDE.md        # 팀원용 작업 규칙
 
 # ERD 단위 폴더 (단일 레포면 루트와 같음)
@@ -52,6 +64,11 @@ monorepo/
 - tbls, @dbml/cli (Node 18+) — `/erd:doctor` 가 설치 가능
 - 임시 DB: Docker, 또는 접근 가능한 PostgreSQL/MySQL 서버 (`make erd PG=postgres://user:pass@host:5432`)
 - 지원 DB: PostgreSQL, MySQL (dbml 원본 기준)
+
+## 개발
+
+- 회귀 테스트: `PG=postgres://user:pass@localhost:5432 plugins/erd/tests/run.sh` (또는 Docker). 임시 DB 가 없으면 DB 시나리오는 SKIP
+- 변경 이력: [CHANGELOG.md](CHANGELOG.md)
 
 ## 여러 계정이 같은 서버를 쓸 때
 
