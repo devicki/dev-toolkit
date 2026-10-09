@@ -1,5 +1,7 @@
 # tbls 사용 가이드
 
+> 기준: tbls 1.96.1 (https://github.com/k1LoW/tbls) — 2026-10 확인. 다른 버전이면 `tbls <명령> --help` 로 옵션을 확인한다.
+
 공식: https://github.com/k1LoW/tbls
 
 ## 이 플러그인에서의 역할
@@ -53,7 +55,7 @@ lint:
 
 ## 공용 /tmp 문제 (여러 계정이 같은 서버에서 tbls 사용)
 
-증상: `panic: open /tmp/go-graphviz/...: permission denied`
+증상: `panic: open /tmp/go-graphviz/...: permission denied` (`erd-doc.sh` 는 `ERD_EXIT=8 tbls` 와 안내문을 출력)
 원인: tbls 내부 라이브러리가 공용 `/tmp/go-graphviz` 에 캐시를 만들고, 먼저 실행한 계정만 접근 가능.
 
 해결 (권장 순):

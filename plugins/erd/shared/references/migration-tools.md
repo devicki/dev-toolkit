@@ -1,5 +1,7 @@
 # 마이그레이션·ORM 도구 연동
 
+> 기준: 2026-10 확인. 도구별 명령·옵션은 버전마다 다를 수 있으므로 실행 전 프로젝트에 설치된 버전의 `--help` 로 확인한다.
+
 `scripts/detect-project.sh` 가 찾은 도구에 맞춰 아래 방식으로 연동한다.
 공통 원리: **도구가 원본이면 그 도구로 임시 DB에 스키마를 만들고, tbls 가 그 DB를 문서화한다.**
 설정은 `erd.env` 의 `ERD_SOURCE=migrations` + `ERD_MIGRATE_CMD` (임시 DB 주소는 `DATABASE_URL` 로 전달됨).
