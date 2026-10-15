@@ -32,7 +32,7 @@ install_tbls() {
   fi
   install -m 0755 "$tmp/tbls" "$BIN/tbls"; rm -rf "$tmp"
   echo "✔ tbls $v → $BIN/tbls"
-  case ":$PATH:" in *":$BIN:"*) ;; *) echo "⚠ $BIN is not on PATH. Add it in your shell config (fish: fish_add_path ~/.local/bin)";; esac
+  case ":$PATH:" in *":$BIN:"*) ;; *) echo "▲ $BIN is not on PATH. Add it in your shell config (fish: fish_add_path ~/.local/bin)";; esac
 }
 
 install_dbml() {

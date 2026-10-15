@@ -18,12 +18,12 @@
 
 ## Prohibited
 
-- ❌ Editing `docs/schema/`, `db/schema.sql`, `db/schema.generated.dbml` directly (generated files — overwritten by the next `make erd`). For a `migrations` unit, descriptions and ADR references go in `.tbls.yml` `comments:`
-- ❌ Putting a production DB address in `PG=`, `MY=`, `ERD_MIGRATE_CMD` or `tbls` arguments
-- ❌ Editing a migration file that has already been applied (committed/deployed) — add a new migration instead
-- ❌ Committing `dbml-error.log` (it is in `.gitignore`)
-- ❌ Adding a DBML `ref` to a table in another ERD unit (another DB) — mark it with a note instead (`units.md`)
-- ❌ Treating a table/column rename as a simple edit — if production data exists, present a rename migration strategy together with the affected code (grep)
-- ❌ Adding tables/columns nobody asked for "for later" — if one seems needed, only propose it
-- ❌ Substituting a similar general-purpose tool (another ERD skill, an ad-hoc script) when this plugin's script exists
-- ❌ Writing project files in a language other than the unit's `ERD_LANG` (R8)
+- ✗ Editing `docs/schema/`, `db/schema.sql`, `db/schema.generated.dbml` directly (generated files — overwritten by the next `make erd`). For a `migrations` unit, descriptions and ADR references go in `.tbls.yml` `comments:`
+- ✗ Putting a production DB address in `PG=`, `MY=`, `ERD_MIGRATE_CMD` or `tbls` arguments
+- ✗ Editing a migration file that has already been applied (committed/deployed) — add a new migration instead
+- ✗ Committing `dbml-error.log` (it is in `.gitignore`)
+- ✗ Adding a DBML `ref` to a table in another ERD unit (another DB) — mark it with a note instead (`units.md`)
+- ✗ Treating a table/column rename as a simple edit — if production data exists, present a rename migration strategy together with the affected code (grep)
+- ✗ Adding tables/columns nobody asked for "for later" — if one seems needed, only propose it
+- ✗ Substituting a similar general-purpose tool (another ERD skill, an ad-hoc script) when this plugin's script exists
+- ✗ Writing project files in a language other than the unit's `ERD_LANG` (R8)

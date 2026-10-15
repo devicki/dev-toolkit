@@ -41,15 +41,15 @@ Apply the first matching row from the top. If a judgment wavers, fix the table; 
 
 | Condition | Severity |
 |---|---|
-| C1, C2 and the code actually uses that relationship | 🚨 **Critical** |
-| C3, C4 and the code has the corresponding validation/duplicate-check logic (the DB is not the last line of defense) | 🚨 **Critical** |
-| C5 (code uses a nonexistent column or a different type → possible runtime error) | 🚨 **Critical** |
-| M3 floating-point money, M4 unique conflict, X1 type mismatch | 🚨 **Critical** |
-| C2·C3·C4 but weak evidence of use in code | ⚠️ **Warning** |
-| P1, P2 (performance that becomes a problem as data grows) | ⚠️ **Warning** |
-| D1, D2, M1, M2, M5, A1 | ⚠️ **Warning** |
-| N1, N2, N3, P3, U1 | 💡 **Info** |
-| Insufficient evidence | 🔎 **Needs confirmation** (no severity) |
+| C1, C2 and the code actually uses that relationship | ✖ **Critical** |
+| C3, C4 and the code has the corresponding validation/duplicate-check logic (the DB is not the last line of defense) | ✖ **Critical** |
+| C5 (code uses a nonexistent column or a different type → possible runtime error) | ✖ **Critical** |
+| M3 floating-point money, M4 unique conflict, X1 type mismatch | ✖ **Critical** |
+| C2·C3·C4 but weak evidence of use in code | ▲ **Warning** |
+| P1, P2 (performance that becomes a problem as data grows) | ▲ **Warning** |
+| D1, D2, M1, M2, M5, A1 | ▲ **Warning** |
+| N1, N2, N3, P3, U1 | ● **Info** |
+| Insufficient evidence | ◇ **Needs confirmation** (no severity) |
 
 For change proposals on tables holding production data, also state the migration risk (backfill, staged NOT NULL, locking).
 Proposals that conflict with project rules or ADRs are separated out as a "Rule change proposal".

@@ -7,6 +7,7 @@
 - 새 플러그인 스캐폴드 `scripts/new-plugin.sh`, 템플릿 `templates/plugin/`
 - 스킬 작성 가이드 `docs/skill-authoring.md`
 - erd 0.3.0, 0.3.1, 0.4.0 ([plugins/erd/CHANGELOG.md](plugins/erd/CHANGELOG.md))
+- erd 0.4.1: 이모지 대신 기호 (스킬 작성 가이드에도 규칙 추가)
 - teamwire 0.1.1, skill-spy 0.1.1: 파스텔 테마, 이모지 대신 기호
 - teamwire 0.1.0: 팀 작업을 배선도 패널로 보여주는 모드 ([plugins/teamwire/CHANGELOG.md](plugins/teamwire/CHANGELOG.md))
 - skill-spy 0.1.0: 첫 모드(hooks 모듈만 있는 플러그인). `validate.py` 가 skills/commands/agents 없이 `hooks/` 만 있는 플러그인도 허용

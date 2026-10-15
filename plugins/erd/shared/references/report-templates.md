@@ -7,11 +7,11 @@
 ## §1 Review report — /erd:review
 
 ```markdown
-# 🔍 ERD review report — {unit} {scope: all | module | table | changes (base ref)}
+# ◆ ERD review report — {unit} {scope: all | module | table | changes (base ref)}
 **Target**: {unit} ({DB}, ERD_SOURCE={value})  **Checked on**: {YYYY-MM-DD}  **Passed/checked**: {n}/{m}
-**Summary**: 🚨 {c} · ⚠️ {w} · 💡 {i} · 🔎 {q}
+**Summary**: ✖ {c} · ▲ {w} · ● {i} · ◇ {q}
 
-## 🚨 Critical (must fix)
+## ✖ Critical (must fix)
 ### [{ID}] {table.column} — {one-line description}
 - Evidence: `{file}:{line}` {what the code does}
 - Suggestion:
@@ -20,19 +20,19 @@
   ```
 - Impact: {migration risk / affected code}
 
-## ⚠️ Warning (should fix)
+## ▲ Warning (should fix)
 (same format)
 
-## 💡 Info
+## ● Info
 - [{ID}] {one line}
 
-## 🔎 Needs confirmation
+## ◇ Needs confirmation
 - {what could not be confirmed, whom to ask and what}
 
 ## Code change suggestions
 - `{file}:{line}` {validation looser than the DB constraint, etc.}
 
-## ✅ Passed
+## ✓ Passed
 - {items among core violations C1–C5 that passed}
 
 ## Next steps
@@ -44,7 +44,7 @@ Data as of: {commit} · docs/schema {generated at}
 ## §2 Drift report — /erd:sync drift
 
 ```markdown
-# 🔀 Schema drift report — {unit}
+# ⇄ Schema drift report — {unit}
 **Compared**: {source of truth} ↔ {compared target}  **Checked on**: {YYYY-MM-DD}  **Differences**: {n}
 
 | Item | Source-of-truth side | Compared side | Suggested action |
@@ -75,26 +75,26 @@ When the user writes in Korean, replace each fixed heading/label with the Korean
 
 | English | Korean |
 |---|---|
-| `🔍 ERD review report` (§1 title) | `🔍 ERD 검수 리포트` |
+| `◆ ERD review report` (§1 title) | `◆ ERD 검수 리포트` |
 | scope `all \| module \| table \| changes (base ref)` | `전체 \| 모듈 \| 테이블 \| 변경분(기준 ref)` |
 | `Target` | `대상` |
 | `Checked on` | `검사일` |
 | `Passed/checked` | `통과/검사 항목` |
 | `Summary` | `요약` |
-| `🚨 Critical (must fix)` | `🚨 Critical (수정 필수)` |
+| `✖ Critical (must fix)` | `✖ Critical (수정 필수)` |
 | `Evidence` | `근거` |
 | `Suggestion` | `제안` |
 | `Impact` | `영향` |
-| `⚠️ Warning (should fix)` | `⚠️ Warning (권장 수정)` |
+| `▲ Warning (should fix)` | `▲ Warning (권장 수정)` |
 | `(same format)` | `(같은 형식)` |
-| `💡 Info` | `💡 Info` |
-| `🔎 Needs confirmation` | `🔎 확인 필요` |
+| `● Info` | `● Info` |
+| `◇ Needs confirmation` | `◇ 확인 필요` |
 | `Code change suggestions` | `코드 수정 제안` |
-| `✅ Passed` | `✅ 통과` |
+| `✓ Passed` | `✓ 통과` |
 | `Next steps` | `다음 단계` |
 | `Data as of` | `데이터 기준` |
 | `{generated at}` (in the Data as of line) | `{생성 시각}` |
-| `🔀 Schema drift report` (§2 title) | `🔀 스키마 차이 점검` |
+| `⇄ Schema drift report` (§2 title) | `⇄ 스키마 차이 점검` |
 | `Compared` | `비교` |
 | `Differences`: `{n}` | `차이`: `{n}건` |
 | table header `Item \| Source-of-truth side \| Compared side \| Suggested action` | `항목 \| 원본 쪽 \| 비교 대상 쪽 \| 조치 제안` |

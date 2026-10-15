@@ -41,7 +41,7 @@ If the request makes it clear, don't ask. Ask once only when it is ambiguous.
 ## Step 3: generate — run the helper
 1. Collected data → (if needed) JSON shaped like `schema.example.json`
 2. `bash ${CLAUDE_PLUGIN_ROOT}/shared/scripts/<helper> <in> <out>`
-3. If the script's validation output is not all ✅, report and re-run
+3. If the script's validation output is not all ✓, report and re-run
 
 ## Decision table
 | Condition | Result |

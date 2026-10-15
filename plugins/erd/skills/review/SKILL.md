@@ -75,7 +75,7 @@ Exactly the `report-templates.md` §1 template, rendered in the user's language 
 | Source location not found | Mark that item "Needs confirmation"; no guessing |
 
 ## Checklist (before reporting)
-- [ ] All of C1–C5 judged (passed items go in the ✅ section)
+- [ ] All of C1–C5 judged (passed items go in the ✓ section)
 - [ ] Every finding has an evidence location
 - [ ] Severity matches the Decision table
 - [ ] Data as of line included

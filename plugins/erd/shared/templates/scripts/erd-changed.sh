@@ -94,7 +94,7 @@ case "$FMT" in
       echo "- $u   $(m "스키마" "schema") $(cnt "$S") · $(m "문서" "docs") $(cnt "$D") · $(m "관련소스" "related") $(cnt "$R") · $(m "기타" "other") $(cnt "$O")"
       for f in $S; do echo "    schema   $f"; done
       for f in $R; do echo "    related  $f"; done
-      [ -n "$S" ] && [ -z "$D" ] && echo "    ⚠ $(m "스키마는 바뀌었는데 docs/schema 변경이 없음 → make erd P=$u 필요 가능성" "schema changed but docs/schema did not → probably needs make erd P=$u")"
+      [ -n "$S" ] && [ -z "$D" ] && echo "    ▲ $(m "스키마는 바뀌었는데 docs/schema 변경이 없음 → make erd P=$u 필요 가능성" "schema changed but docs/schema did not → probably needs make erd P=$u")"
     done
     [ $any = 0 ] && echo "- $(m "ERD 단위에 해당하는 변경 없음" "no changes in any ERD unit")"
     ;;

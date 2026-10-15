@@ -203,7 +203,7 @@ if [ "$MODE" = "check" ]; then
   echo "  $(m "문서가 최신입니다" "Docs are up to date")"
   if ! run_tbls lint --dsn "$DSN"; then
     if [ "${ERD_CHECK_LINT:-warn}" = "strict" ]; then fail 1 lint "$(m "[$UNIT_REL] lint 실패 (ERD_CHECK_LINT=strict)" "[$UNIT_REL] lint failed (ERD_CHECK_LINT=strict)")"; fi
-    echo "⚠ $(m "lint 경고 (CI를 실패시키려면 erd.env 에 ERD_CHECK_LINT=strict)" "lint warnings (set ERD_CHECK_LINT=strict in erd.env to fail CI)")"
+    echo "▲ $(m "lint 경고 (CI를 실패시키려면 erd.env 에 ERD_CHECK_LINT=strict)" "lint warnings (set ERD_CHECK_LINT=strict in erd.env to fail CI)")"
   fi
   echo "✔ [$UNIT_REL] $(m "검사 통과" "check passed")"
 else
@@ -215,6 +215,6 @@ else
     db2dbml "$d" "$c" -o "$ERD_DERIVED_DBML" >/dev/null 2>&1 && echo "▶ $(m "파생 DBML 갱신" "Derived DBML updated"): $ERD_DERIVED_DBML" || true
   fi
   echo "▶ $(m "품질 검사" "Quality check") (tbls lint)"
-  run_tbls lint --dsn "$DSN" || echo "⚠ $(m "lint 경고가 있습니다 (위 내용 확인)" "lint warnings (see above)")"
+  run_tbls lint --dsn "$DSN" || echo "▲ $(m "lint 경고가 있습니다 (위 내용 확인)" "lint warnings (see above)")"
   echo "✔ $(m "완료" "Done"): docs/schema/README.md"
 fi
