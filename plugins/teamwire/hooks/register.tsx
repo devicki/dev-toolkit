@@ -224,8 +224,10 @@ const pollHerdr = async ($: EngineInterface) => {
       const engine = a?.agent ?? m.engine
       const pane = a?.pane_id ?? m.pane
       const model = models.get(m.id) ?? m.model
-      if (state === m.state && name === m.name && engine === m.engine && pane === m.pane && model === m.model) return m
-      return { ...m, state, name, engine, model, ...(pane ? { pane } : {}), ...(m.state === 'working' && state === 'reply' ? surge('in', now) : {}) }
+      // Its answer in, the work it owed this lead is settled.
+      const owed = state === 'working' || state === 'blocked' ? m.owed : false
+      if (state === m.state && name === m.name && engine === m.engine && pane === m.pane && model === m.model && owed === m.owed) return m
+      return { ...m, state, name, engine, model, owed, ...(pane ? { pane } : {}), ...(m.state === 'working' && state === 'reply' ? surge('in', now) : {}) }
     }),
   )
 }
@@ -373,7 +375,10 @@ export const register: Register = on => {
       const now = await $.clock.now()
       const known = find(await read($, membersAtom), c.target)
       const id = known?.id ?? `herdr:${c.target}`
-      if (c.verb === 'prompt' || c.verb === 'send') {
+      if (c.verb === 'keys') {
+        // A key press (an approval, Enter) is no handoff: a spark on the wire, nothing in COMMS.
+        if (known) await patch($, id, m => ({ ...m, ...surge('out', now) }))
+      } else if (c.verb === 'prompt' || c.verb === 'send') {
         await wire(
           $,
           id,
@@ -381,6 +386,7 @@ export const register: Register = on => {
           {
             ...(c.verb === 'prompt' ? { state: 'working' as const, model: undefined, ...(c.text ? { role: oneLine(c.text, 400) } : {}) } : {}),
             sentAt: now,
+            owed: true,
             ...surge('out', now),
           },
         )

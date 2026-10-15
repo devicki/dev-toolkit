@@ -84,3 +84,33 @@ test('an agent whose tool call waits on approval shows NEEDS YOU until the call 
   expect(drawn).toContain('resumed')
   await again.unmount()
 })
+
+test("a herdr pane busy with another session's work leaves the member alone; key presses are no handoff", async ($, on) => {
+  let t = NOW
+  let status = 'working'
+  on('clock.now', () => ({ value: (t += 100) }) as never)
+  on('clock.every', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('ui.toast', () => ({ value: undefined }) as never)
+  on('process.run', (_, e) => ok((e as { argv: string[] }).argv[2] === 'read' ? '' : herdr(status)))
+  on('tool.call', () => ({ result: 'ok', text: 'ok' }) as never)
+  const bash = (command: string) => $.tool.call({ tool: 'Bash', command } as never)
+
+  await bash(`herdr agent prompt wN:p2 "Review the diff"`)
+  t += 10_000
+  status = 'idle'
+  await bash(`herdr agent list`) // no herdr verb: nothing happens
+  await bash(`herdr agent wait wN:p2 --until idle`) // the poll after it sees the answer: REPLY READY
+  await bash(`herdr agent read wN:p2`) // read: IDLE
+  status = 'working' // someone else's prompt
+  await bash(`herdr agent send-keys wN:p2 Enter`)
+
+  const ui = await $.ui.mount({ plugin: 'teamwire', surface: 'terminal', component: 'Pane', requestId: 'teamwire', props: PROPS, viewport: { columns: 112, rows: 60 } } as never)
+  const drawn = JSON.stringify(await ui.drawn())
+  expect(drawn).toContain('answer read by lead')
+  expect(drawn).toContain(' IDLE ')
+  expect(drawn).not.toContain('took a new task')
+  expect(drawn).toContain('1 handoffs')
+  expect(drawn).not.toContain('lead → grok·p2  Enter')
+  await ui.unmount()
+})

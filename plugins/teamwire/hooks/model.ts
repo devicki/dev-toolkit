@@ -7,13 +7,14 @@ export const STALE_MS = 5 * 60_000
 /** herdr may still report idle right after a prompt lands; trust it only after this. */
 const SETTLE_MS = 5000
 
-export type HerdrCall = { verb: 'prompt' | 'send' | 'read' | 'wait'; target: string; text?: string; wait: boolean }
+/** `prompt`/`send` hand over work; `keys` only presses keys (an approval, Enter); `read` takes the answer; `wait` holds the lead. */
+export type HerdrCall = { verb: 'prompt' | 'send' | 'keys' | 'read' | 'wait'; target: string; text?: string; wait: boolean }
 
 const VERBS: Record<string, HerdrCall['verb']> = {
   'agent prompt': 'prompt',
-  'agent send-keys': 'send',
+  'agent send-keys': 'keys',
   'pane send-text': 'send',
-  'pane send-keys': 'send',
+  'pane send-keys': 'keys',
   'pane run': 'send',
   'agent read': 'read',
   'pane read': 'read',
@@ -107,6 +108,8 @@ export const shortModel = (m: string) => m.replace(/^claude-/, '').replace(/\[.*
 /** herdr's agent_status folded into a member's state. */
 export function fromHerdr(m: Member, status: string | undefined, now: number): MemberState {
   if (status === undefined) return m.state === 'working' || m.state === 'blocked' ? 'done' : m.state
+  // Busy with work another session handed it: not this lead's to show.
+  if (m.owed === false) return m.state
   if (status === 'working') return 'working'
   if (status === 'blocked') return 'blocked'
   if (status === 'idle' || status === 'done') {
