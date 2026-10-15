@@ -30,7 +30,7 @@ allowed-tools:
 4. Language (R8): reply in the user's language; text written into the project follows the unit's `ERD_LANG`.
 
 ## Procedure
-1. Summarize the check result above as a ✅/⚠️/❌ table (keep explanations short).
+1. Summarize the check result above as a ✓/▲/✗ table (keep explanations short).
 2. If `MISSING=` is empty, say "Ready", point to the next step `/erd:init`, and stop.
 3. Action per missing tool:
 
@@ -48,7 +48,7 @@ allowed-tools:
 | Situation | Action |
 |---|---|
 | install-tools.sh fails (network, npm error) | Report the last error in the output verbatim. Retry only once |
-| Installed, but `check-tools.sh` still shows ❌ | PATH problem. Give the step 5 instructions |
+| Installed, but `check-tools.sh` still shows ✗ | PATH problem. Give the step 5 instructions |
 
 ## Checklist (before finishing)
 - [ ] On re-check, `MISSING=` is empty, or the remaining items and reasons were reported

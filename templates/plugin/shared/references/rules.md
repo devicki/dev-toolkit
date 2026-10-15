@@ -12,5 +12,5 @@
 
 ## Prohibited
 
-- ❌ <Editing generated files directly>
-- ❌ <Running against dangerous targets (e.g. a production DB)>
+- ✗ <Editing generated files directly>
+- ✗ <Running against dangerous targets (e.g. a production DB)>

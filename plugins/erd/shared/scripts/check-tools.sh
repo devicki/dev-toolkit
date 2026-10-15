@@ -3,9 +3,9 @@
 # Output: human-readable table + last line MISSING=<comma list>
 set -u
 
-ok()   { printf '  ✅ %-12s %s\n' "$1" "$2"; }
-warn() { printf '  ⚠️  %-12s %s\n' "$1" "$2"; }
-miss() { printf '  ❌ %-12s %s\n' "$1" "$2"; MISSING+=("$1"); }
+ok()   { printf '  ✓ %-12s %s\n' "$1" "$2"; }
+warn() { printf '  ▲ %-12s %s\n' "$1" "$2"; }
+miss() { printf '  ✗ %-12s %s\n' "$1" "$2"; MISSING+=("$1"); }
 MISSING=()
 
 echo "## Environment"
