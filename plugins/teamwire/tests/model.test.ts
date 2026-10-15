@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import type { Member } from '../types'
-import { flowOf, fromHerdr, herdrCalls, modelOnScreen, runs, shortModel, wireCells } from '../hooks/model'
+import { busyCount, cells, chronicle, dur, fanout, gauge, isStale, kTokens, STALE_MS, flowOf, fromHerdr, herdrCalls, modelOnScreen, runs, shortModel, wireCells } from '../hooks/model'
 
 test('herdrCalls finds who the lead talks to, through quotes, options and chains', async () => {
   expect(herdrCalls(`herdr agent prompt wN:p2 "Review the diff; report \\"only\\" bugs" --wait --timeout 120000`)).toEqual([
@@ -12,6 +12,7 @@ test('herdrCalls finds who the lead talks to, through quotes, options and chains
     { verb: 'wait', target: 'reviewer', wait: true },
   ])
   expect(herdrCalls(`~/.local/bin/herdr agent send-keys wN:p2 Enter; echo done`)).toEqual([{ verb: 'send', target: 'wN:p2', text: 'Enter', wait: false }])
+  expect(herdrCalls(`herdr agent prompt wN:p4 "/teamwire" >/dev/null 2>&1`)).toEqual([{ verb: 'prompt', target: 'wN:p4', text: '/teamwire', wait: false }])
   expect(herdrCalls(`herdr agent list && git status`)).toEqual([])
   expect(herdrCalls(`echo "herdr agent prompt x hi"`)).toEqual([])
 })
@@ -52,4 +53,47 @@ test('the model each agent reasons with, from its footer or its id', async () =>
   expect(modelOnScreen('$ ls\nREADME.md')).toBe(undefined)
   expect(shortModel('claude-haiku-5-5')).toBe('haiku 5.5')
   expect(shortModel('claude-opus-5-5[1m]')).toBe('opus 5.5')
+})
+
+test('the fan: rounded ends, branches every third row, the lead at the centre', async () => {
+  const one = fanout(1)
+  expect([one.lead, one.rows, one.trunk(1), one.trunk(2)]).toEqual([1, 5, '─', ' '])
+  const three = fanout(3)
+  expect(three.lead).toBe(4)
+  expect([0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(three.trunk).join('')).toBe(' ╭││┼││╰  ')
+  const two = fanout(2)
+  expect([two.lead, two.rows]).toEqual([3, 7])
+  expect([0, 1, 2, 3, 4, 5].map(two.trunk).join('')).toBe(' ╭│┤╰ ')
+})
+
+test('activity: joins, finishes with how long they took, approvals and reads', async () => {
+  const base = member({ id: 'm', state: 'working', since: 1_000 })
+  expect(chronicle([], [base], 5_000)).toEqual({
+    beats: [{ at: 5_000, who: 'm', kind: 'join', text: 'joined as herdr · grok, working' }],
+    patches: { m: { stateAt: 5_000, since: 5_000 } },
+  })
+  expect(chronicle([base], [{ ...base, state: 'reply' }], 81_000).patches).toEqual({ m: { stateAt: 81_000, took: 80_000 } })
+  expect(chronicle([base], [{ ...base, state: 'reply' }], 81_000).beats[0]).toEqual({ at: 81_000, who: 'm', kind: 'reply', text: 'finished in 1m 20s · reply ready' })
+  expect(chronicle([{ ...base, state: 'reply' }], [{ ...base, state: 'idle' }], 0).beats[0]!.text).toBe('answer read by lead')
+  expect(chronicle([base], [{ ...base, state: 'blocked' }], 0).beats[0]!.kind).toBe('block')
+  expect(chronicle([{ ...base, state: 'idle' }], [base], 0)).toEqual({ beats: [{ at: 0, who: 'm', kind: 'work', text: 'took a new task' }], patches: { m: { stateAt: 0, since: 0 } } })
+  expect(chronicle([base], [base], 9).beats).toEqual([])
+  expect([dur(800), dur(80_000), dur(7_500_000)]).toEqual(['1s', '1m 20s', '2h 5m'])
+})
+
+test('context gauge: cells filled by share, colour by how full', async () => {
+  expect(gauge(42, 5)).toEqual({ on: '▰▰', off: '▱▱▱', level: 'calm' })
+  expect(gauge(70, 4).level).toBe('filling')
+  expect(gauge(96, 4)).toEqual({ on: '▰▰▰▰', off: '', level: 'full' })
+  expect([kTokens(840), kTokens(42_300), kTokens(1_000_000)]).toEqual(['840', '42k', '1M'])
+})
+
+test('an unread answer goes stale and stops pulling current; busy counts work held', async () => {
+  const reply = member({ state: 'reply', stateAt: 0 })
+  expect(isStale(reply, STALE_MS - 1)).toBe(false)
+  expect(flowOf(reply, STALE_MS - 1).dir).toBe('in')
+  expect(isStale(reply, STALE_MS)).toBe(true)
+  expect(flowOf(reply, STALE_MS)).toEqual({ hot: false })
+  expect(busyCount([member({ state: 'working' }), member({ state: 'blocked' }), reply])).toBe(2)
+  expect([cells('grok·p2'), cells('리뷰어'), cells('a🧩')]).toEqual([7, 6, 3])
 })

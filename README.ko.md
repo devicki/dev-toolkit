@@ -67,7 +67,7 @@ claude plugin install teamwire@dev-toolkit
 
 ```
 ╭──────────╮
-│ ◆ LEAD   ├┳━━━━━━━━━━━━━━━━━━━━━━━━▶ ● grok·p2              WORKING ⏳
+│ ◆ LEAD   ├┳━━━━━━━━━━━━━━━━━━━━━━━━▶ ● grok·p2              WORKING ◆
 │ opus 5.5 │┃                            herdr · grok · Grok 4.7 (xhigh)
 ╰─high─────╯┗◀┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅ ◉ Map callers          REPLY READY
                                          subagent · Explore · haiku 5.5 · high
@@ -75,6 +75,7 @@ claude plugin install teamwire@dev-toolkit
 
 - 팀원: 서브에이전트, agent teams 팀원, 다른 Claude 세션, 그리고 [herdr](https://herdr.dev)를 쓰면 herdr 패널의 codex·grok 같은 CLI 에이전트.
 - 종류마다 선 모양이 다릅니다 (`┅` 서브에이전트, `═` 팀원, `━` herdr, `┉` 세션).
+- 팀장 context 사용량이 보이는 대시보드, ACTIVITY 기록, 팀원 FOCUS, 승인 대기·팀 작업 종료 알림.
 - 토큰을 쓰지 않습니다. 훅은 이벤트를 지켜보고 패널을 그리기만 합니다.
 
 자세한 내용: [plugins/teamwire/README.ko.md](plugins/teamwire/README.ko.md)

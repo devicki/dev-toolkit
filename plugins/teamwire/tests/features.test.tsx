@@ -1,0 +1,86 @@
+import { expect, test } from 'claude-code/testing'
+
+const NOW = Date.parse('2026-10-15T09:00:00Z')
+const PROPS = { title: 'Team', isFocused: true, bodyColumns: 110, placement: 'dock', scroll: { offset: 0, bodyRows: 60 }, view: {} }
+const ok = (stdout: string) => ({ value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }) as never
+const herdr = (status: string) => JSON.stringify({ result: { agents: [{ agent: 'grok', agent_status: status, pane_id: 'wN:p2' }] } })
+
+test('the moments not to miss: a member that needs you raises a toast and a notification', async ($, on) => {
+  let n = 0
+  const toasts: string[] = []
+  const notes: string[] = []
+  on('clock.now', () => ({ value: NOW + n++ * 100 }) as never)
+  on('clock.every', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('ui.toast', (_, e) => (toasts.push((e as { text: string }).text), { value: undefined }) as never)
+  on('ui.notify', (_, e) => (notes.push((e as { text: string }).text), { value: { isSent: true, channel: 'terminal' } }) as never)
+  on('process.run', (_, e) => ok((e as { argv: string[] }).argv[2] === 'read' ? '' : herdr('blocked')))
+  on('tool.call', () => ({ result: 'ok', text: 'ok' }) as never)
+
+  await $.tool.call({ tool: 'Bash', command: `herdr agent prompt wN:p2 "Deploy the docs"` } as never)
+  expect(toasts.some(t => t.includes('needs you'))).toBe(true)
+  expect(notes.some(t => t.includes('needs you'))).toBe(true)
+})
+
+for (const surface of ['terminal', 'desktop'] as const) {
+  test(`on ${surface}: focus a member, see two members talk, and hear the team stand down`, async ($, on) => {
+    let n = 0
+    const toasts: string[] = []
+    on('clock.now', () => ({ value: NOW + n++ * 100 }) as never)
+    on('clock.every', () => ({ value: undefined }) as never)
+    on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+    on('ui.toast', (_, e) => (toasts.push((e as { text: string }).text), { value: undefined }) as never)
+    on('agent.list', () => ({ value: [] }) as never)
+    let spawned = 0
+    on('agent.spawn', () => ({ model: 'claude-haiku-5-5', agentId: ++spawned === 1 ? 'a1' : 'a2' }) as never)
+    on('session.send', () => ({ isDelivered: true }) as never)
+    on('tool.call', () => ({ result: 'ok', text: 'ok' }) as never)
+
+    await $.agent.spawn({ prompt: 'map every caller of parse()', description: 'Map callers', subagentType: 'Explore', background: false, tool_use_id: 't1' } as never)
+    await $.agent.spawn({ prompt: 'write the report', description: 'Writer', subagentType: 'general-purpose', background: false, tool_use_id: 't2' } as never)
+    await $.session.send({ to: 'Writer', text: 'callers are in src/a.ts', agentId: 'a1' } as never)
+
+    const ui = await $.ui.mount({ plugin: 'teamwire', surface, component: 'Pane', requestId: 'teamwire', props: PROPS, viewport: { columns: 112, rows: 60 } } as never)
+    let drawn = JSON.stringify(await ui.drawn())
+    expect(drawn).toContain('◀─╯')
+    await ui.press({ key: 'm-a1' })
+    drawn = JSON.stringify(await ui.drawn())
+    expect(drawn).toContain('FOCUS · Map callers')
+    expect(drawn).toContain('map every caller of parse()')
+    expect(drawn).toContain('callers are in src/a.ts')
+    await ui.unmount()
+
+    // Each foreground call returning finishes its member; the last one home stands the team down.
+    await $.tool.call({ tool: 'Agent', tool_use_id: 't1', description: 'Map callers', prompt: 'x' } as never)
+    expect(toasts.some(t => t.includes('stood down'))).toBe(false)
+    await $.tool.call({ tool: 'Agent', tool_use_id: 't2', description: 'Writer', prompt: 'x' } as never)
+    expect(toasts.some(t => t.includes('team stood down · 2 members'))).toBe(true)
+  })
+}
+
+test('an agent whose tool call waits on approval shows NEEDS YOU until the call settles', async ($, on) => {
+  let n = 0
+  const toasts: string[] = []
+  on('clock.now', () => ({ value: NOW + n++ * 100 }) as never)
+  on('clock.every', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('ui.toast', (_, e) => (toasts.push((e as { text: string }).text), { value: undefined }) as never)
+  on('ui.notify', () => ({ value: { isSent: true, channel: 'terminal' } }) as never)
+  on('agent.spawn', () => ({ model: 'claude-haiku-5-5', agentId: 'a1' }) as never)
+  on('tool.check', () => ({ decision: 'ask' }) as never)
+  on('tool.call', () => ({ result: 'ok', text: 'ok' }) as never)
+
+  await $.agent.spawn({ prompt: 'list skills', description: 'lister', subagentType: 'general-purpose', background: true, tool_use_id: 't1' } as never)
+  await $.tool.check({ tool: 'Bash', input: { command: 'ls' }, agentId: 'a1' } as never)
+  const ui = await $.ui.mount({ plugin: 'teamwire', surface: 'terminal', component: 'Pane', requestId: 'teamwire', props: PROPS, viewport: { columns: 112, rows: 60 } } as never)
+  expect(JSON.stringify(await ui.drawn())).toContain('NEEDS YOU')
+  expect(toasts.some(t => t.includes('lister needs you'))).toBe(true)
+  await ui.unmount()
+
+  await $.tool.call({ tool: 'Bash', command: 'ls', agentId: 'a1' } as never)
+  const again = await $.ui.mount({ plugin: 'teamwire', surface: 'terminal', component: 'Pane', requestId: 'teamwire', props: PROPS, viewport: { columns: 112, rows: 60 } } as never)
+  const drawn = JSON.stringify(await again.drawn())
+  expect(drawn).toContain('WORKING')
+  expect(drawn).toContain('resumed')
+  await again.unmount()
+})

@@ -1,7 +1,9 @@
-import type { Dir, Member, MemberState } from '../types'
+import type { Beat, Dir, Member, MemberState } from '../types'
 
 export const LEAD = 'lead'
 export const BURST_MS = 4000
+/** An answer nobody has read for this long stops pulling current. */
+export const STALE_MS = 5 * 60_000
 /** herdr may still report idle right after a prompt lands; trust it only after this. */
 const SETTLE_MS = 5000
 
@@ -71,7 +73,8 @@ export function herdrCalls(cmd: string): HerdrCall[] {
       const t = w[j]!
       if (t === '--wait') wait = true
       else if (VALUED.has(t)) j++
-      else if (!t.startsWith('--')) pos.push(t)
+      // Redirections (`>/dev/null`, `2>`) are the shell's, not the message's.
+      else if (!t.startsWith('--') && !/^\d*[<>]/.test(t)) pos.push(t)
     }
     if (pos[0]) calls.push({ verb, target: pos[0], ...(verb === 'prompt' || verb === 'send' ? { text: pos.slice(1).join(' ') } : {}), wait })
   }
@@ -122,12 +125,21 @@ export function fromAgent(status: string): MemberState {
   return 'failed'
 }
 
+export const isStale = (m: Member, now: number) => m.state === 'reply' && m.stateAt !== undefined && now - m.stateAt >= STALE_MS
+
 /** Which way current runs on a member's wire now, and whether it is a surge. */
 export function flowOf(m: Member, now: number): { dir?: Dir; hot: boolean } {
   if (m.burst && m.burst.until > now) return { dir: m.burst.dir, hot: true }
   if (m.state === 'working') return { dir: 'out', hot: false }
-  if (m.state === 'reply') return { dir: 'in', hot: false }
+  if (m.state === 'reply' && !isStale(m, now)) return { dir: 'in', hot: false }
   return { hot: false }
+}
+
+/** Terminal cells a string takes: East Asian wide letters and emoji take two. */
+export const cells = (s: string) => {
+  let n = 0
+  for (const ch of s) n += /[\u1100-\u115f\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\ufe30-\ufe4f\uff00-\uff60\uffe0-\uffe6\u{1f300}-\u{1faff}]/u.test(ch) ? 2 : 1
+  return n
 }
 
 /** Per cell of a wire: 0 copper, 1 spark, 2 glow trailing it; sparks travel `dir`, one every `gap` cells. */
@@ -165,5 +177,78 @@ export const surge = (dir: Dir, now: number) => ({ burst: { dir, until: now + BU
 /** The member a name, address or id points at. */
 export const find = (list: Member[], ref: string) =>
   list.find(m => m.id === ref || m.name === ref || m.id === `herdr:${ref}` || m.pane === ref || m.id === `peer:${ref}`)
+
+export const KIND_LABEL: Record<Member['kind'], string> = { subagent: 'subagent', teammate: 'teammate', herdr: 'herdr', peer: 'session' }
+
+/** A duration as people say it: `8s`, `1m 20s`, `2h 5m`. */
+export const dur = (ms: number) => {
+  const s = Math.max(1, Math.round(ms / 1000))
+  return s < 60 ? `${s}s` : s < 3600 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`
+}
+
+/**
+ * What changed between two rosters: ACTIVITY lines, and the clocks to set on the members that moved
+ * (`since` for work begun, `stateAt` for any change, `took` for work ended).
+ */
+export function chronicle(before: Member[], after: Member[], now: number): { beats: Beat[]; patches: Record<string, Partial<Member>> } {
+  const beats: Beat[] = []
+  const patches: Record<string, Partial<Member>> = {}
+  const started: string[] = []
+  const beat = (who: string, kind: Beat['kind'], text: string) => beats.push({ at: now, who, kind, text })
+  for (const m of after) {
+    const p = before.find(x => x.id === m.id)
+    if (!p) {
+      beat(m.id, 'join', `joined as ${KIND_LABEL[m.kind]}${m.engine ? ` · ${m.engine}` : ''}${m.state === 'working' ? ', working' : ''}`)
+      if (m.state === 'working') started.push(m.id)
+      patches[m.id] = { stateAt: now }
+      continue
+    }
+    if (p.state === m.state) continue
+    patches[m.id] = { stateAt: now, ...(p.state === 'working' && p.since !== undefined ? { took: now - p.since } : {}) }
+    const took = p.since !== undefined ? dur(now - p.since) : undefined
+    if (m.state === 'working') {
+      beat(m.id, 'work', p.state === 'blocked' ? 'resumed' : 'took a new task')
+      started.push(m.id)
+    } else if (m.state === 'reply') beat(m.id, 'reply', `finished${took ? ` in ${took}` : ''} · reply ready`)
+    else if (m.state === 'done') beat(m.id, 'done', `done${took ? ` in ${took}` : ''}`)
+    else if (m.state === 'failed') beat(m.id, 'fail', `failed${took ? ` after ${took}` : ''}`)
+    else if (m.state === 'blocked') beat(m.id, 'block', 'needs you: an approval or question is open')
+    else beat(m.id, p.state === 'reply' ? 'read' : 'idle', p.state === 'reply' ? 'answer read by lead' : `went idle${took ? ` after ${took}` : ''}`)
+  }
+  for (const id of started) patches[id] = { ...patches[id], since: now }
+  return { beats, patches }
+}
+
+/** Members holding work: running, or stopped on a question. */
+export const busyCount = (list: Member[]) => list.filter(m => m.state === 'working' || m.state === 'blocked').length
+
+/**
+ * The fan of wires out of the lead: member k branches off a rounded trunk on row 1 + 3k (its two info rows below),
+ * and the lead's connector meets the trunk midway, so the lead sits at the centre of its team.
+ */
+export function fanout(n: number): { lead: number; rows: number; trunk: (r: number) => string } {
+  const last = 1 + 3 * (n - 1)
+  const lead = n === 1 ? 1 : 1 + Math.round(1.5 * (n - 1))
+  const trunk = (r: number) => {
+    if (n === 1) return r === 1 ? '─' : ' '
+    if (r < 1 || r > last) return ' '
+    const branch = (r - 1) % 3 === 0
+    if (r === 1) return '╭'
+    if (r === last) return '╰'
+    if (r === lead) return branch ? '┼' : '┤'
+    return branch ? '├' : '│'
+  }
+  // The lead's box spans lead-1 … lead+3: frame, name, model, context gauge, frame.
+  return { lead, rows: Math.max(3 * n + 1, lead + 4), trunk }
+}
+
+/** A gauge of `w` cells for a fraction, and the colour it reads in: calm, filling, nearly full. */
+export const gauge = (pct: number, w: number) => {
+  const f = Math.max(0, Math.min(w, Math.round((pct / 100) * w)))
+  return { on: '▰'.repeat(f), off: '▱'.repeat(w - f), level: pct >= 85 ? 'full' : pct >= 60 ? 'filling' : 'calm' } as const
+}
+
+/** Token counts as people read them: `840`, `42k`, `1.2M`. */
+export const kTokens = (n: number) => (n >= 1e6 ? `${+(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : String(n))
 
 export const ago = (ms: number) => (ms < 60_000 ? `${Math.max(0, Math.round(ms / 1000))}s` : ms < 3_600_000 ? `${Math.round(ms / 60_000)}m` : `${Math.round(ms / 3_600_000)}h`)

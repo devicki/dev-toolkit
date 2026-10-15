@@ -67,7 +67,7 @@ When the lead session hands out work, a `Team` pane opens with a wiring diagram:
 
 ```
 ╭──────────╮
-│ ◆ LEAD   ├┳━━━━━━━━━━━━━━━━━━━━━━━━▶ ● grok·p2              WORKING ⏳
+│ ◆ LEAD   ├┳━━━━━━━━━━━━━━━━━━━━━━━━▶ ● grok·p2              WORKING ◆
 │ opus 5.5 │┃                            herdr · grok · Grok 4.7 (xhigh)
 ╰─high─────╯┗◀┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅ ◉ Map callers          REPLY READY
                                          subagent · Explore · haiku 5.5 · high
@@ -75,6 +75,7 @@ When the lead session hands out work, a `Team` pane opens with a wiring diagram:
 
 - Members: subagents, agent-teams teammates, other Claude sessions, and, with [herdr](https://herdr.dev), CLI agents such as codex and grok in herdr panes.
 - Each kind has its own wire (`┅` subagent, `═` teammate, `━` herdr, `┉` session).
+- A dashboard with the lead's context window, an ACTIVITY log, FOCUS on one member, and alerts when a member needs you or the team stands down.
 - It uses no tokens: the hooks only observe events and draw the pane.
 
 More: [plugins/teamwire/README.md](plugins/teamwire/README.md).
