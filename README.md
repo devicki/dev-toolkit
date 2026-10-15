@@ -7,6 +7,7 @@ devicki의 Claude Code 플러그인 모음(마켓플레이스)입니다.
 ```
 /plugin marketplace add devicki/dev-toolkit
 /plugin install erd@dev-toolkit
+/plugin install skill-spy@dev-toolkit
 ```
 
 셸에서: `claude plugin marketplace add devicki/dev-toolkit && claude plugin install erd@dev-toolkit`
@@ -17,6 +18,7 @@ devicki의 Claude Code 플러그인 모음(마켓플레이스)입니다.
 | 플러그인 | 버전 | 설명 |
 |---|---|---|
 | [erd](plugins/erd) | 0.4.0 | DBML(설계 원본) + tbls(문서·ERD·lint)로 프로젝트 ERD를 설계·문서화·유지보수. 모노레포 지원 |
+| [skill-spy](plugins/skill-spy) | 0.1.0 | (모드) 작업이 끝나면 그 턴에 쓰인 스킬을 토스트로 알림 |
 
 ## 플러그인 개발
 
@@ -25,6 +27,7 @@ scripts/new-plugin.sh <이름> --skill <첫 스킬> --desc "<설명>"   # 스캐
 python3 scripts/validate.py [--base origin/main]                # 구조 검증 (CI 에서도 실행)
 claude plugin validate .                                         # 공식 검증
 plugins/<이름>/tests/run.sh                                      # 플러그인 회귀 테스트
+claude plugin test plugins/<이름>                                # 모드(hooks 모듈) 테스트
 ```
 
 작성 규칙: [docs/skill-authoring.md](docs/skill-authoring.md) · 변경 이력: 각 플러그인의 `CHANGELOG.md`
