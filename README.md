@@ -7,8 +7,8 @@ A Claude Code plugin marketplace by devicki: plugins and mods for day-to-day dev
 | Plugin | Version | Type | What it does |
 |---|---|---|---|
 | [erd](plugins/erd) | 0.4.0 | Skills | Design, document and maintain project ERDs with DBML (source of truth) and tbls (docs, Mermaid ERD, lint). Monorepo aware. |
-| [skill-spy](plugins/skill-spy) | 0.1.0 | Mod | When a turn ends, shows a toast for each skill that turn used. |
-| [teamwire](plugins/teamwire) | 0.1.0 | Mod | A live wiring diagram of your agent team, with current flowing between the lead and each member. |
+| [skill-spy](plugins/skill-spy) | 0.1.1 | Mod | When a turn ends, shows a toast for each skill that turn used. |
+| [teamwire](plugins/teamwire) | 0.1.1 | Mod | A live wiring diagram of your agent team, with current flowing between the lead and each member. |
 
 ## Install
 
@@ -39,11 +39,11 @@ Skills often load without you noticing: Claude picks one from your request, or a
 ```
 ╭───────────────────────────╮
 │ skill-spy                 │
-│ 🧩 erd:design ×2          │
+│ ✦ erd:design ×2          │
 ╰───────────────────────────╯
 ╭───────────────────────────╮
 │ skill-spy                 │
-│ 🧩 ponytail:ponytail      │
+│ ✦ ponytail:ponytail      │
 ╰───────────────────────────╯
 ```
 

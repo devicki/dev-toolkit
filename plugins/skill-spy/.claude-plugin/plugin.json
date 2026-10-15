@@ -1,6 +1,6 @@
 {
   "name": "skill-spy",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "작업(턴)이 끝나면 그 턴에 쓰인 스킬을 토스트로 알려줍니다. 직접 입력한 /스킬과 Claude가 알아서 쓴 스킬 모두.",
   "author": {
     "name": "devicki",
@@ -9,5 +9,10 @@
   "homepage": "https://github.com/devicki/dev-toolkit",
   "repository": "https://github.com/devicki/dev-toolkit",
   "license": "MIT",
-  "keywords": ["mod", "skills", "toast", "observability"]
+  "keywords": [
+    "mod",
+    "skills",
+    "toast",
+    "observability"
+  ]
 }

@@ -43,18 +43,21 @@ const tickAtom = atom({ plugin: 'teamwire', key: 'tick' } as const, 0)
 const selectedAtom = atom({ plugin: 'teamwire', key: 'selected' } as const, '')
 const linkAtom = atom({ plugin: 'teamwire', key: 'link' } as const, null as Link | null)
 
-const CYAN = '#22D3EE'
-const AMBER = '#FBBF24'
-const ROSE = '#FB7185'
-const GREEN = '#34D399'
-const SLATE = '#64748B'
-const BLUE = '#61A5FA'
-const COPPER = '#475569'
-const SPARK = '#F8FAFC'
-const GOLD = '#E5B650'
-const INK = '#0B1121'
+// Pastel, warm and few: the wires are copper and their current is yellow; red is kept for what needs you,
+// green for room to spare. Each state is a step along one family, not a colour of its own.
+const BUTTER = '#F1DB8E' // current flowing to a working member
+const HONEY = '#E6B17E' // an answer flowing back; a context window filling
+const WHEAT = '#CDBF94' // work done
+const LINEN = '#EDE3C4' // a member joining
+const ASH = '#9A9282' // idle, and quiet figures
+const CORAL = '#E8908A' // needs you, failed, a context window nearly full
+const SAGE = '#9FCB98' // room to spare
+const COPPER = '#6E6656' // a wire with no current, and the rules between sections
+const SPARK = '#FFF8E1' // the spark running along a live wire
+const GOLD = '#E3C77A' // the lead
+const INK = '#2A251D' // text on a chip
 
-const COLOR: Record<MemberState, string> = { working: CYAN, reply: AMBER, blocked: ROSE, idle: SLATE, done: GREEN, failed: ROSE }
+const COLOR: Record<MemberState, string> = { working: BUTTER, reply: HONEY, blocked: CORAL, idle: ASH, done: WHEAT, failed: CORAL }
 const BADGE: Record<MemberState, string> = {
   working: 'WORKING',
   reply: 'REPLY READY',
@@ -64,8 +67,8 @@ const BADGE: Record<MemberState, string> = {
   failed: 'FAILED',
 }
 const GLYPH: Record<MemberState, string> = { working: '●', reply: '◉', blocked: '▲', idle: '○', done: '✓', failed: '×' }
-const LEVEL = { calm: GREEN, filling: AMBER, full: ROSE } as const
-const BEAT_COLOR: Record<Beat['kind'], string> = { join: BLUE, work: CYAN, reply: AMBER, done: GREEN, fail: ROSE, block: ROSE, read: GOLD, idle: SLATE }
+const LEVEL = { calm: SAGE, filling: HONEY, full: CORAL } as const
+const BEAT_COLOR: Record<Beat['kind'], string> = { join: LINEN, work: BUTTER, reply: HONEY, done: WHEAT, fail: CORAL, block: CORAL, read: GOLD, idle: ASH }
 /** Each kind of member hangs on its own wire: live while current flows, idle when not. */
 const WIRE: Record<Member['kind'], { live: string; idle: string }> = {
   subagent: { live: '┅', idle: '┄' },
@@ -488,15 +491,15 @@ export const register: Register = on => {
     const leadChip = waiting
       ? { text: ` ◆ LEAD · WAITING ON ${waiting.name.toUpperCase()} `, bg: GOLD }
       : lead.busy
-        ? { text: ' ◆ LEAD · WORKING ', bg: CYAN }
-        : { text: ' ◆ LEAD · IDLE ', bg: SLATE }
+        ? { text: ' ◆ LEAD · WORKING ', bg: BUTTER }
+        : { text: ' ◆ LEAD · IDLE ', bg: ASH }
     const first = members.reduce((t, m) => Math.min(t, m.addedAt), now)
     const tiles: { label: string; value: string; color: string; on: boolean }[] = [
       { label: 'TEAM', value: String(n), color: SPARK, on: n > 0 },
-      { label: 'WORKING', value: String(count('working')), color: CYAN, on: count('working') > 0 },
-      { label: 'REPLY', value: String(count('reply')), color: AMBER, on: count('reply') > 0 },
-      { label: 'NEEDS YOU', value: String(count('blocked')), color: ROSE, on: count('blocked') > 0 },
-      { label: 'DONE', value: `${count('done')}${count('failed') ? `/${count('failed')}✗` : ''}`, color: count('failed') ? ROSE : GREEN, on: count('done') + count('failed') > 0 },
+      { label: 'WORKING', value: String(count('working')), color: BUTTER, on: count('working') > 0 },
+      { label: 'REPLY', value: String(count('reply')), color: HONEY, on: count('reply') > 0 },
+      { label: 'NEEDS YOU', value: String(count('blocked')), color: CORAL, on: count('blocked') > 0 },
+      { label: 'DONE', value: `${count('done')}${count('failed') ? `/${count('failed')}✗` : ''}`, color: count('failed') ? CORAL : WHEAT, on: count('done') + count('failed') > 0 },
       { label: 'UPTIME', value: n ? dur(now - first) : '—', color: SPARK, on: n > 0 },
     ]
     const busy = busyCount(members)
@@ -565,7 +568,7 @@ export const register: Register = on => {
             pick: { id: m.id, ...(k < 9 ? { hotkey: String(k + 1) } : {}) },
           },
           { t: ' '.repeat(Math.max(1, NW - BTN - cells(oneLine(m.name, NW - 1 - BTN)))) },
-          stale ? { t: ` REPLY · ${dur(now - (m.stateAt ?? now))} `, c: AMBER, bg: COPPER, b: true } : { t: ` ${BADGE[m.state]} `, c: INK, bg: color, b: true },
+          stale ? { t: ` REPLY · ${dur(now - (m.stateAt ?? now))} `, c: HONEY, bg: COPPER, b: true } : { t: ` ${BADGE[m.state]} `, c: INK, bg: color, b: true },
           ...(waiting?.id === m.id ? [{ t: ' ◆', c: GOLD }] : []),
         ])
       } else if ((r - 1) % 3 === 1) {
@@ -578,7 +581,7 @@ export const register: Register = on => {
           under,
           { t: label, c: color },
           { t: ` · ${oneLine([m.engine, m.model, m.effort].filter(Boolean).join(' · ') || '—', room)}`, d: true },
-          ...(mx ? [{ t: `  ${mx}`, c: SLATE }] : []),
+          ...(mx ? [{ t: `  ${mx}`, c: ASH }] : []),
         ])
       } else diagram.push([...head, under, { t: oneLine(m.role || '—', Math.max(12, W - L - 21 - RAIL)), d: true }])
     }
@@ -669,7 +672,7 @@ export const register: Register = on => {
             </Box>
             {line('bar', [
               { t: 'busy    ', d: true },
-              { t: '▰'.repeat(filled), c: CYAN },
+              { t: '▰'.repeat(filled), c: BUTTER },
               { t: '▱'.repeat(barW - filled), c: COPPER },
               { t: `  ${busy}/${n} members · ${msgs.length} handoffs${lastBeat ? ` · last event ${ago(now - lastBeat.at)} ago` : ''}`, d: true },
             ])}
@@ -685,11 +688,11 @@ export const register: Register = on => {
           line('summary', [
             { t: `${n} team`, b: true },
             { t: ' · ', d: true },
-            { t: `${count('working')} working`, c: CYAN },
+            { t: `${count('working')} working`, c: BUTTER },
             { t: ' · ', d: true },
-            { t: `${count('reply')} reply`, c: AMBER },
+            { t: `${count('reply')} reply`, c: HONEY },
             { t: ' · ', d: true },
-            { t: `${count('blocked')} needs you`, c: ROSE },
+            { t: `${count('blocked')} needs you`, c: CORAL },
             { t: ' · ', d: true },
             { t: `ctx ${ctxPct}%`, c: LEVEL[gauge(ctxPct, 1).level] },
           ])
