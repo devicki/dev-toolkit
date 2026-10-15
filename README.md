@@ -8,7 +8,7 @@ A Claude Code plugin marketplace by devicki: plugins and mods for day-to-day dev
 |---|---|---|---|
 | [erd](plugins/erd) | 0.4.0 | Skills | Design, document and maintain project ERDs with DBML (source of truth) and tbls (docs, Mermaid ERD, lint). Monorepo aware. |
 | [skill-spy](plugins/skill-spy) | 0.1.1 | Mod | When a turn ends, shows a toast for each skill that turn used. |
-| [teamwire](plugins/teamwire) | 0.1.1 | Mod | A live wiring diagram of your agent team, with current flowing between the lead and each member. |
+| [teamwire](plugins/teamwire) | 0.1.2 | Mod | A live wiring diagram of your agent team, with current flowing between the lead and each member. |
 
 ## Install
 
@@ -36,16 +36,7 @@ To update, run `/plugin marketplace update dev-toolkit`, then `/reload-plugins` 
 
 Skills often load without you noticing: Claude picks one from your request, or a subagent preloads one. skill-spy is a **mod** (a plugin with only a hooks module, no skills). When a turn ends, it shows one toast in the top-right corner for each skill that turn used:
 
-```
-╭───────────────────────────╮
-│ skill-spy                 │
-│ ✦ erd:design ×2          │
-╰───────────────────────────╯
-╭───────────────────────────╮
-│ skill-spy                 │
-│ ✦ ponytail:ponytail      │
-╰───────────────────────────╯
-```
+![skill-spy toasts](docs/images/skill-spy.png)
 
 - **It catches every way a skill starts:** typing `/name`, Claude calling the Skill tool on its own, and a subagent preloading a skill.
 - **Repeats are counted:** if the same skill ran twice in one turn, the toast shows `×2`. A turn without skills shows nothing.
@@ -65,13 +56,7 @@ More: [plugins/skill-spy/README.md](plugins/skill-spy/README.md).
 
 When the lead session hands out work, a `Team` pane opens with a wiring diagram: the lead on the left and one branch per member. Each member shows its state, `kind · agent · model · effort` and the task it was handed. Sparks run out to a member while it works and back to the lead while its answer waits to be read.
 
-```
-╭──────────╮
-│ ◆ LEAD   ├┳━━━━━━━━━━━━━━━━━━━━━━━━▶ ● grok·p2              WORKING ◆
-│ opus 5.5 │┃                            herdr · grok · Grok 4.7 (xhigh)
-╰─high─────╯┗◀┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅ ◉ Map callers          REPLY READY
-                                         subagent · Explore · haiku 5.5 · high
-```
+![teamwire pane](docs/images/teamwire.png)
 
 - Members: subagents, agent-teams teammates, other Claude sessions, and, with [herdr](https://herdr.dev), CLI agents such as codex and grok in herdr panes.
 - Each kind has its own wire (`┅` subagent, `═` teammate, `━` herdr, `┉` session).
@@ -92,6 +77,8 @@ Write the schema in DBML and generate per-module docs, a Mermaid ERD and lint re
 | `/erd:design` | Design or change the schema interactively |
 | `/erd:review` | Review the schema against backend and frontend code; findings ranked by severity |
 | `/erd:sync` | Refresh docs, check drift, hook into migration generation, add CI checks |
+
+![/erd:doctor](docs/images/erd-doctor.png)
 
 A plain request works too, for example "design the tables for orders". Skills reply in your language. Files written into the project follow `ERD_LANG=ko|en` in the unit's `erd.env`.
 

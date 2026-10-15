@@ -8,7 +8,7 @@ devicki의 Claude Code 플러그인 마켓플레이스입니다. 일상 개발 �
 |---|---|---|---|
 | [erd](plugins/erd) | 0.4.0 | 스킬 | DBML(설계 원본)과 tbls(문서·Mermaid ERD·lint)로 프로젝트 ERD를 설계·문서화·유지보수합니다. 모노레포 지원 |
 | [skill-spy](plugins/skill-spy) | 0.1.1 | 모드 | 턴이 끝나면 그 턴에 쓰인 스킬을 토스트로 알려줍니다 |
-| [teamwire](plugins/teamwire) | 0.1.1 | 모드 | 팀 작업을 실시간 배선도로 보여주고, 팀장과 팀원 사이의 흐름을 전류처럼 표시합니다 |
+| [teamwire](plugins/teamwire) | 0.1.2 | 모드 | 팀 작업을 실시간 배선도로 보여주고, 팀장과 팀원 사이의 흐름을 전류처럼 표시합니다 |
 
 ## 설치
 
@@ -36,16 +36,7 @@ claude plugin install teamwire@dev-toolkit
 
 스킬은 모르는 사이에 로드되는 경우가 많습니다. Claude가 요청을 보고 직접 고르기도 하고, 서브에이전트가 미리 불러오기도 합니다. skill-spy는 **모드(mod)** 입니다. 스킬 없이 hooks 모듈만 있는 플러그인이라는 뜻입니다. 턴이 끝나면 그 턴에 쓰인 스킬마다 오른쪽 위에 토스트를 하나씩 띄웁니다.
 
-```
-╭───────────────────────────╮
-│ skill-spy                 │
-│ ✦ erd:design ×2          │
-╰───────────────────────────╯
-╭───────────────────────────╮
-│ skill-spy                 │
-│ ✦ ponytail:ponytail      │
-╰───────────────────────────╯
-```
+![skill-spy 토스트](docs/images/skill-spy.png)
 
 - **스킬이 시작되는 모든 경로를 잡습니다:** `/이름`을 직접 입력한 경우, Claude가 스스로 Skill 도구를 호출한 경우, 서브에이전트가 스킬을 미리 불러온 경우 모두요.
 - **반복 횟수를 셉니다:** 한 턴에 같은 스킬을 두 번 쓰면 `×2`로 표시합니다. 스킬을 쓰지 않은 턴에는 아무것도 뜨지 않습니다.
@@ -65,13 +56,7 @@ claude plugin install teamwire@dev-toolkit
 
 팀장 세션이 일을 맡기면 `Team` 패널이 열려 배선도를 보여줍니다. 왼쪽에 팀장, 팀원마다 가지 하나. 팀원마다 상태, `종류 · 에이전트 · 모델 · effort`, 맡은 일이 표시되고, 일하는 동안에는 팀원 쪽으로, 답을 아직 안 읽었으면 팀장 쪽으로 불꽃이 흐릅니다.
 
-```
-╭──────────╮
-│ ◆ LEAD   ├┳━━━━━━━━━━━━━━━━━━━━━━━━▶ ● grok·p2              WORKING ◆
-│ opus 5.5 │┃                            herdr · grok · Grok 4.7 (xhigh)
-╰─high─────╯┗◀┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅ ◉ Map callers          REPLY READY
-                                         subagent · Explore · haiku 5.5 · high
-```
+![teamwire 패널](docs/images/teamwire.png)
 
 - 팀원: 서브에이전트, agent teams 팀원, 다른 Claude 세션, 그리고 [herdr](https://herdr.dev)를 쓰면 herdr 패널의 codex·grok 같은 CLI 에이전트.
 - 종류마다 선 모양이 다릅니다 (`┅` 서브에이전트, `═` 팀원, `━` herdr, `┉` 세션).
@@ -92,6 +77,8 @@ DBML로 스키마를 작성하고, tbls로 모듈별 문서·Mermaid ERD·lint �
 | `/erd:design` | 대화하며 스키마 설계·수정 |
 | `/erd:review` | 백엔드·프론트 코드와 대조해 스키마 검토, 심각도별 정리 |
 | `/erd:sync` | 문서 갱신, drift 점검, 마이그레이션 생성 연동, CI 검사 추가 |
+
+![/erd:doctor](docs/images/erd-doctor.png)
 
 "주문 기능에 필요한 테이블 설계해줘"처럼 자연어로 요청해도 됩니다. 스킬은 사용자가 쓴 언어로 답하고, 프로젝트에 쓰는 파일은 단위의 `erd.env`에 있는 `ERD_LANG=ko|en`을 따릅니다.
 
