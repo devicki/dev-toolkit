@@ -7,11 +7,11 @@ A **mod** that shows a toast for each skill used in a turn, once the turn ends. 
 ```
 ╭───────────────────────────╮
 │ skill-spy                 │
-│ 🧩 erd:design ×2          │
+│ ✦ erd:design ×2          │
 ╰───────────────────────────╯
 ╭───────────────────────────╮
 │ skill-spy                 │
-│ 🧩 ponytail:ponytail      │
+│ ✦ ponytail:ponytail      │
 ╰───────────────────────────╯
 ```
 

@@ -18,7 +18,7 @@ export const register: Register = on => {
   on('turn.complete', ($, e, next) => {
     // A toast is one line (a newline draws as �), so one toast per skill stacks them as a list.
     for (const [skill, n] of used) {
-      $.ui.toast(`🧩 ${skill}${n > 1 ? ` ×${n}` : ''}`, { timeoutMs: TOAST_MS })
+      $.ui.toast(`✦ ${skill}${n > 1 ? ` ×${n}` : ''}`, { timeoutMs: TOAST_MS })
     }
     used.clear()
 

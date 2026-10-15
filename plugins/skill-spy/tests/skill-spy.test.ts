@@ -20,7 +20,7 @@ test('one toast per skill used in the turn, repeats counted', async ($, on) => {
   await $.skill.prompt({ skill: 'erd:review', text: 'b' })
   await $.turn.complete(TURN)
 
-  expect(toasts).toEqual(['🧩 erd:design ×2', '🧩 erd:review'])
+  expect(toasts).toEqual(['✦ erd:design ×2', '✦ erd:review'])
 })
 
 test('a turn without skills shows nothing, and the next turn starts empty', async ($, on) => {
@@ -29,5 +29,5 @@ test('a turn without skills shows nothing, and the next turn starts empty', asyn
   await $.turn.complete(TURN)
   await $.turn.complete(TURN)
 
-  expect(toasts).toEqual(['🧩 erd:design'])
+  expect(toasts).toEqual(['✦ erd:design'])
 })
