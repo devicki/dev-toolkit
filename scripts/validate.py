@@ -99,7 +99,7 @@ def validate_plugin(entry: dict, base: str | None) -> None:
             check(isinstance(manifest["keywords"], list), f"{name}/plugin.json: keywords 는 배열")
         allowed = {"name", "version", "description", "author", "homepage", "repository", "license",
                    "keywords", "commands", "agents", "skills", "hooks", "mcpServers", "lspServers",
-                   "outputStyles", "userConfig", "dependencies"}
+                   "outputStyles", "userConfig", "dependencies", "types"}
         extra = set(manifest) - allowed
         check(not extra, f"{name}/plugin.json: 비표준 키 {sorted(extra)} — 공식 스키마 필드만 사용", "warning")
 

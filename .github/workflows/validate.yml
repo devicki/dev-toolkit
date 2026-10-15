@@ -26,6 +26,8 @@ jobs:
           claude plugin validate .
       - name: skill-spy 테스트
         run: claude plugin test plugins/skill-spy
+      - name: teamwire 테스트
+        run: claude plugin test plugins/teamwire
 
   erd-tests:
     runs-on: ubuntu-latest
