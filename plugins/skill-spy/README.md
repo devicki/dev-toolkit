@@ -4,16 +4,7 @@
 
 A **mod** that shows a toast for each skill used in a turn, once the turn ends. It catches skills you type, like `/erd:design`, and skills Claude picks on its own from your request.
 
-```
-╭───────────────────────────╮
-│ skill-spy                 │
-│ ✦ erd:design ×2          │
-╰───────────────────────────╯
-╭───────────────────────────╮
-│ skill-spy                 │
-│ ✦ ponytail:ponytail      │
-╰───────────────────────────╯
-```
+![skill-spy toasts](../../docs/images/skill-spy.png)
 
 - One toast per skill. A skill used more than once shows a count, such as `×2`. A turn without skills shows nothing.
 - Toasts appear in the top-right corner and stay for 60 seconds. Click one to close it, or hover over it to keep it open.

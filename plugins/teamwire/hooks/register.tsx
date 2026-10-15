@@ -518,7 +518,7 @@ export const register: Register = on => {
     const leadCol = (r: number): Seg[] => {
       if (r === fan.lead - 1) return [{ t: '╭──────────╮', c: boxC }]
       if (r === fan.lead) return [{ t: '│', c: boxC }, { t: ' ◆ LEAD   ', c: GOLD, b: true }, { t: '├', c: boxC }]
-      if (r === fan.lead + 1) return [{ t: '│', c: boxC }, { t: ` ${lead.model.slice(0, 8).padEnd(9)}`, d: true }, { t: '│', c: boxC }]
+      if (r === fan.lead + 1) return [{ t: '│', c: boxC }, { t: ` ${(lead.model.length > 9 ? lead.model.replace(' ', '') : lead.model).slice(0, 9).padEnd(9)}`, d: true }, { t: '│', c: boxC }]
       if (r === fan.lead + 2) {
         const g = gauge(ctxPct, 5)
         return [{ t: '│ ', c: boxC }, { t: g.on, c: LEVEL[g.level] }, { t: g.off, c: COPPER }, { t: lead.ctx ? `${ctxPct}%`.padStart(4) : '  — ', d: !lead.ctx }, { t: '│', c: boxC }]
@@ -528,7 +528,7 @@ export const register: Register = on => {
     }
     const metrics = (m: Member) => {
       const t = m.state === 'working' || m.state === 'blocked' ? (m.since !== undefined ? dur(now - m.since) : '') : m.took !== undefined ? dur(m.took) : ''
-      return [t, m.tools ? `${m.tools} tools` : '', m.outTokens ? `${kTokens(m.outTokens)} out` : ''].filter(Boolean).join(' · ')
+      return [t, m.tools ? `${m.tools} tool${m.tools === 1 ? '' : 's'}` : '', m.outTokens ? `${kTokens(m.outTokens)} out` : ''].filter(Boolean).join(' · ')
     }
     const diagram: Seg[][] = []
     for (let r = 0; r < fan.rows; r++) {

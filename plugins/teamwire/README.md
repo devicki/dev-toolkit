@@ -4,33 +4,7 @@
 
 A **mod** that draws your agent team as a live wiring diagram. When the lead session hands out work, a `Team` pane opens. It shows who is on the team, what each member was given, which model it runs, and where the current flows: out to a member while it works, back to the lead when an answer is waiting.
 
-```
-◆ TEAMWIRE  agent team, live                           ◆ LEAD · WAITING ON GROK·P2
-╭─────────╮ ╭─────────╮ ╭─────────╮ ╭───────────╮ ╭─────────╮ ╭─────────╮
-│ 3       │ │ 1       │ │ 1       │ │ 0         │ │ 1       │ │ 4m 12s  │
-│ TEAM    │ │ WORKING │ │ REPLY   │ │ NEEDS YOU │ │ DONE    │ │ UPTIME  │
-╰─────────╯ ╰─────────╯ ╰─────────╯ ╰───────────╯ ╰─────────╯ ╰─────────╯
-busy    ▰▰▰▰▰▰▰▰▱▱▱▱▱▱▱▱  1/3 members · 7 handoffs · last event 8s ago
-context ▰▰▰▰▰▰▱▱▱▱▱▱▱▱▱▱  38% · 376k / 1M tokens · $4.51
-
-ORCHESTRATION ──────────────────────────────────── 3 wires · 2 live · 1-3 focus
-              ╭─━━━━━━━━━━━━━━━━━━━━▶ ● [ grok·p2 ]      WORKING ◆
-╭──────────╮  │                         herdr · grok · Grok 4.7 (xhigh)  1m 20s
-│ ◆ LEAD   ├──┤                         Review the diff for bugs
-│ opus 5.5 │  ├─◀┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅ ◉ [ Map callers ]  REPLY READY
-│ ▰▰▱▱▱ 38%│  │                         subagent · Explore · haiku 5.5  34s · 9 tools
-╰─high─────╯  │                         find every caller of parse()
-              ╰─────────────────────── ✓ [ Writer ]       DONE
-
-ACTIVITY ─────────────────────────────────────────────────────────── 9 events
-▍ Map callers      finished in 34s · reply ready                          8s
-▍ grok·p2          took a new task                                       1m
-
-COMMS ─────────────────────────────────────────────────────────── 7 handoffs
-lead → grok·p2  Review the diff for bugs                                  1m
-
-[ c  clear finished ]  [ l  clear log ]
-```
+![teamwire pane](../../docs/images/teamwire.png)
 
 ## What it shows
 
