@@ -35,6 +35,8 @@ export type Member = {
   pane?: string
   /** herdr: when the lead last prompted it; idle reports just after are stale. */
   sentAt?: number
+  /** herdr: it holds work this lead handed it. A pane busy with someone else's work leaves the member as it was. */
+  owed?: boolean
   /** The Agent call behind a Claude agent, to match its return. */
   toolUseId?: string
   /** A Claude agent the engine ran in the background: its Agent call returns at once. */

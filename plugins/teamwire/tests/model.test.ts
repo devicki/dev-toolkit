@@ -11,7 +11,8 @@ test('herdrCalls finds who the lead talks to, through quotes, options and chains
     { verb: 'read', target: 'wN:p3', wait: false },
     { verb: 'wait', target: 'reviewer', wait: true },
   ])
-  expect(herdrCalls(`~/.local/bin/herdr agent send-keys wN:p2 Enter; echo done`)).toEqual([{ verb: 'send', target: 'wN:p2', text: 'Enter', wait: false }])
+  expect(herdrCalls(`~/.local/bin/herdr agent send-keys wN:p2 Enter; echo done`)).toEqual([{ verb: 'keys', target: 'wN:p2', wait: false }])
+  expect(herdrCalls(`herdr pane send-text wN:p2 "run the tests"`)).toEqual([{ verb: 'send', target: 'wN:p2', text: 'run the tests', wait: false }])
   expect(herdrCalls(`herdr agent prompt wN:p4 "/teamwire" >/dev/null 2>&1`)).toEqual([{ verb: 'prompt', target: 'wN:p4', text: '/teamwire', wait: false }])
   expect(herdrCalls(`herdr agent list && git status`)).toEqual([])
   expect(herdrCalls(`echo "herdr agent prompt x hi"`)).toEqual([])
@@ -26,6 +27,10 @@ test('herdr states: a finished worker holds REPLY until the lead reads; fresh pr
   expect(fromHerdr(member({ state: 'idle' }), 'idle', 10_000)).toBe('idle')
   expect(fromHerdr(member({ state: 'working' }), 'blocked', 10_000)).toBe('blocked')
   expect(fromHerdr(member({ state: 'working' }), undefined, 10_000)).toBe('done')
+  // Work another session handed the pane does not move a member this lead has settled with.
+  expect(fromHerdr(member({ state: 'reply', owed: false }), 'working', 10_000)).toBe('reply')
+  expect(fromHerdr(member({ state: 'idle', owed: false }), 'blocked', 10_000)).toBe('idle')
+  expect(fromHerdr(member({ state: 'idle', owed: true }), 'working', 10_000)).toBe('working')
 })
 
 test('current runs out to a worker, back from a finished one, and surges after a message', async () => {
