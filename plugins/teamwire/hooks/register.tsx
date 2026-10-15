@@ -193,7 +193,8 @@ export const register: Register = on => {
       name: oneLine(e.name || e.description, 24),
       kind: r.teammateId ? 'teammate' : 'subagent',
       engine: e.fork ? 'fork' : e.subagentType === 'general-purpose' ? 'general' : e.subagentType,
-      role: oneLine(e.prompt || e.description),
+      // A teammate's prompt arrives wrapped by the engine; the task is what follows the wrapper.
+      role: oneLine(e.prompt.replace(/^You are teammate "[^"]*" on team \S+\.\s*/, '') || e.description),
       state: 'working',
       toolUseId: e.tool_use_id,
       bg: e.background,
@@ -303,6 +304,9 @@ export const register: Register = on => {
     // A member row is 33 cells besides its wire and name; both give way so it never wraps.
     const NW = Math.max(10, Math.min(20, W - 33 - 12))
     const L = Math.max(4, Math.min(24, W - 33 - NW))
+    // Rows the body has room for (an inline pane is short): COMMS gets what the diagram leaves.
+    const room = e.props.scroll?.bodyRows ?? 40
+    const commsN = Math.max(0, Math.min(3, room - (3 * members.length + 5) - 2))
     const count = (s: MemberState) => members.filter(m => m.state === s).length
     const waiting = lead.waitingOn ? members.find(m => m.id === lead.waitingOn) : undefined
     const leadSays = waiting ? `waiting on ${waiting.name}` : lead.busy ? 'working' : 'idle'
@@ -386,11 +390,11 @@ export const register: Register = on => {
           </Box>
         )}
 
-        {msgs.length > 0 && (
+        {msgs.length > 0 && commsN > 0 && (
           <Box flexDirection="column">
             <Text dimColor bold>COMMS</Text>
             {msgs
-              .slice(-3)
+              .slice(-commsN)
               .reverse()
               .map((m, i) => (
                 <Text key={`m${i}`}>
