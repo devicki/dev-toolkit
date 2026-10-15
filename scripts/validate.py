@@ -108,8 +108,9 @@ def validate_plugin(entry: dict, base: str | None) -> None:
 
     skills_dir = pdir / "skills"
     skills = sorted(skills_dir.glob("*/SKILL.md")) if skills_dir.is_dir() else []
-    check(bool(skills) or (pdir / "commands").is_dir() or (pdir / "agents").is_dir(),
-          f"{name}: skills/commands/agents 중 하나는 있어야 함")
+    # hooks/ 만 있는 플러그인 = 모드(mod)
+    check(bool(skills) or any((pdir / d).is_dir() for d in ("commands", "agents", "hooks")),
+          f"{name}: skills/commands/agents/hooks 중 하나는 있어야 함")
     for sk in skills:
         text = sk.read_text(encoding="utf-8")
         fm = frontmatter(text)
