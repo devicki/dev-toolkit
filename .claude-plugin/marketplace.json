@@ -10,6 +10,11 @@
       "name": "erd",
       "source": "./plugins/erd",
       "description": "DBML로 ERD를 설계하고 tbls로 모듈별 문서를 생성·유지보수합니다. 초기 구축, 소스코드/ORM/문서에서 가져오기, 대화형 설계, 검토, 동기화를 지원합니다."
+    },
+    {
+      "name": "skill-spy",
+      "source": "./plugins/skill-spy",
+      "description": "작업(턴)이 끝나면 그 턴에 쓰인 스킬을 토스트로 알려주는 모드. 직접 입력한 /스킬과 Claude가 알아서 쓴 스킬 모두."
     }
   ]
 }
