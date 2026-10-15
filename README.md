@@ -8,6 +8,7 @@ A Claude Code plugin marketplace by devicki: plugins and mods for day-to-day dev
 |---|---|---|---|
 | [erd](plugins/erd) | 0.4.0 | Skills | Design, document and maintain project ERDs with DBML (source of truth) and tbls (docs, Mermaid ERD, lint). Monorepo aware. |
 | [skill-spy](plugins/skill-spy) | 0.1.0 | Mod | When a turn ends, shows a toast for each skill that turn used. |
+| [teamwire](plugins/teamwire) | 0.1.0 | Mod | A live wiring diagram of your agent team, with current flowing between the lead and each member. |
 
 ## Install
 
@@ -17,6 +18,7 @@ Inside Claude Code:
 /plugin marketplace add devicki/dev-toolkit
 /plugin install erd@dev-toolkit
 /plugin install skill-spy@dev-toolkit
+/plugin install teamwire@dev-toolkit
 ```
 
 From a shell:
@@ -25,6 +27,7 @@ From a shell:
 claude plugin marketplace add devicki/dev-toolkit
 claude plugin install erd@dev-toolkit
 claude plugin install skill-spy@dev-toolkit
+claude plugin install teamwire@dev-toolkit
 ```
 
 To update, run `/plugin marketplace update dev-toolkit`, then `/reload-plugins` in any open session.
@@ -57,6 +60,25 @@ Limits:
 - A mod runs inside Claude Code with your user permissions. It has no sandbox.
 
 More: [plugins/skill-spy/README.md](plugins/skill-spy/README.md).
+
+## teamwire: watch your agent team work
+
+When the lead session hands out work, a `Team` pane opens with a wiring diagram: the lead on the left and one branch per member. Each member shows its state, `kind · agent · model · effort` and the task it was handed. Sparks run out to a member while it works and back to the lead while its answer waits to be read.
+
+```
+╭──────────╮
+│ ◆ LEAD   ├┳━━━━━━━━━━━━━━━━━━━━━━━━▶ ● grok·p2              WORKING ◆
+│ opus 5.5 │┃                            herdr · grok · Grok 4.7 (xhigh)
+╰─high─────╯┗◀┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅ ◉ Map callers          REPLY READY
+                                         subagent · Explore · haiku 5.5 · high
+```
+
+- Members: subagents, agent-teams teammates, other Claude sessions, and, with [herdr](https://herdr.dev), CLI agents such as codex and grok in herdr panes.
+- Each kind has its own wire (`┅` subagent, `═` teammate, `━` herdr, `┉` session).
+- A dashboard with the lead's context window, an ACTIVITY log, FOCUS on one member, and alerts when a member needs you or the team stands down.
+- It uses no tokens: the hooks only observe events and draw the pane.
+
+More: [plugins/teamwire/README.md](plugins/teamwire/README.md).
 
 ## erd: schema design to docs
 
@@ -94,7 +116,7 @@ templates/plugin/                 # scaffold used by new-plugin.sh
 scripts/                          # validate.py, new-plugin.sh
 ```
 
-CI (`.github/workflows/validate.yml`) runs `validate.py`, `claude plugin validate .`, the skill-spy tests and the erd tests against Postgres.
+CI (`.github/workflows/validate.yml`) runs `validate.py`, `claude plugin validate .`, the skill-spy and teamwire tests, and the erd tests against Postgres.
 
 Each plugin's changes are in its own `CHANGELOG.md`. Marketplace-level changes are in [CHANGELOG.md](CHANGELOG.md).
 

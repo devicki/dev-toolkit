@@ -8,6 +8,7 @@ devicki의 Claude Code 플러그인 마켓플레이스입니다. 일상 개발 �
 |---|---|---|---|
 | [erd](plugins/erd) | 0.4.0 | 스킬 | DBML(설계 원본)과 tbls(문서·Mermaid ERD·lint)로 프로젝트 ERD를 설계·문서화·유지보수합니다. 모노레포 지원 |
 | [skill-spy](plugins/skill-spy) | 0.1.0 | 모드 | 턴이 끝나면 그 턴에 쓰인 스킬을 토스트로 알려줍니다 |
+| [teamwire](plugins/teamwire) | 0.1.0 | 모드 | 팀 작업을 실시간 배선도로 보여주고, 팀장과 팀원 사이의 흐름을 전류처럼 표시합니다 |
 
 ## 설치
 
@@ -17,6 +18,7 @@ Claude Code 안에서:
 /plugin marketplace add devicki/dev-toolkit
 /plugin install erd@dev-toolkit
 /plugin install skill-spy@dev-toolkit
+/plugin install teamwire@dev-toolkit
 ```
 
 셸에서:
@@ -25,6 +27,7 @@ Claude Code 안에서:
 claude plugin marketplace add devicki/dev-toolkit
 claude plugin install erd@dev-toolkit
 claude plugin install skill-spy@dev-toolkit
+claude plugin install teamwire@dev-toolkit
 ```
 
 업데이트하려면 `/plugin marketplace update dev-toolkit`을 실행한 뒤, 열려 있는 세션에서 `/reload-plugins`를 실행하세요.
@@ -57,6 +60,25 @@ claude plugin install skill-spy@dev-toolkit
 - 모드는 Claude Code 안에서 사용자 권한으로 실행되며, 샌드박스가 없습니다.
 
 자세한 내용: [plugins/skill-spy/README.ko.md](plugins/skill-spy/README.ko.md)
+
+## teamwire: 팀 작업 지켜보기
+
+팀장 세션이 일을 맡기면 `Team` 패널이 열려 배선도를 보여줍니다. 왼쪽에 팀장, 팀원마다 가지 하나. 팀원마다 상태, `종류 · 에이전트 · 모델 · effort`, 맡은 일이 표시되고, 일하는 동안에는 팀원 쪽으로, 답을 아직 안 읽었으면 팀장 쪽으로 불꽃이 흐릅니다.
+
+```
+╭──────────╮
+│ ◆ LEAD   ├┳━━━━━━━━━━━━━━━━━━━━━━━━▶ ● grok·p2              WORKING ◆
+│ opus 5.5 │┃                            herdr · grok · Grok 4.7 (xhigh)
+╰─high─────╯┗◀┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅┅ ◉ Map callers          REPLY READY
+                                         subagent · Explore · haiku 5.5 · high
+```
+
+- 팀원: 서브에이전트, agent teams 팀원, 다른 Claude 세션, 그리고 [herdr](https://herdr.dev)를 쓰면 herdr 패널의 codex·grok 같은 CLI 에이전트.
+- 종류마다 선 모양이 다릅니다 (`┅` 서브에이전트, `═` 팀원, `━` herdr, `┉` 세션).
+- 팀장 context 사용량이 보이는 대시보드, ACTIVITY 기록, 팀원 FOCUS, 승인 대기·팀 작업 종료 알림.
+- 토큰을 쓰지 않습니다. 훅은 이벤트를 지켜보고 패널을 그리기만 합니다.
+
+자세한 내용: [plugins/teamwire/README.ko.md](plugins/teamwire/README.ko.md)
 
 ## erd: 스키마 설계부터 문서까지
 
@@ -94,7 +116,7 @@ templates/plugin/                 # new-plugin.sh가 쓰는 스캐폴드
 scripts/                          # validate.py, new-plugin.sh
 ```
 
-CI(`.github/workflows/validate.yml`)는 `validate.py`, `claude plugin validate .`, skill-spy 테스트, Postgres를 띄운 erd 테스트를 실행합니다.
+CI(`.github/workflows/validate.yml`)는 `validate.py`, `claude plugin validate .`, skill-spy·teamwire 테스트, Postgres를 띄운 erd 테스트를 실행합니다.
 
 변경 이력은 플러그인마다 각자의 `CHANGELOG.md`에 있고, 마켓플레이스 단위 변경은 [CHANGELOG.md](CHANGELOG.md)에 있습니다.
 

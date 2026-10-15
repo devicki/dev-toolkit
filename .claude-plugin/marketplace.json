@@ -15,6 +15,11 @@
       "name": "skill-spy",
       "source": "./plugins/skill-spy",
       "description": "작업(턴)이 끝나면 그 턴에 쓰인 스킬을 토스트로 알려주는 모드. 직접 입력한 /스킬과 Claude가 알아서 쓴 스킬 모두."
+    },
+    {
+      "name": "teamwire",
+      "source": "./plugins/teamwire",
+      "description": "팀장 세션이 팀원에게 일을 맡기면 패널이 열려, 팀원 구성·역할·모델과 지시/답의 흐름을 전선의 전류처럼 보여주는 모드. herdr 사용 시 codex·grok 같은 외부 CLI도 팀원으로 표시."
     }
   ]
 }
