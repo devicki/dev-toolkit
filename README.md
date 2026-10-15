@@ -1,8 +1,17 @@
 # dev-toolkit
 
-devicki의 Claude Code 플러그인 모음(마켓플레이스)입니다.
+**English** · [한국어](README.ko.md)
 
-## 설치
+A Claude Code plugin marketplace by devicki: plugins and mods for day-to-day development work.
+
+| Plugin | Version | Type | What it does |
+|---|---|---|---|
+| [erd](plugins/erd) | 0.4.0 | Skills | Design, document and maintain project ERDs with DBML (source of truth) and tbls (docs, Mermaid ERD, lint). Monorepo aware. |
+| [skill-spy](plugins/skill-spy) | 0.1.0 | Mod | When a turn ends, shows a toast for each skill that turn used. |
+
+## Install
+
+Inside Claude Code:
 
 ```
 /plugin marketplace add devicki/dev-toolkit
@@ -10,24 +19,85 @@ devicki의 Claude Code 플러그인 모음(마켓플레이스)입니다.
 /plugin install skill-spy@dev-toolkit
 ```
 
-셸에서: `claude plugin marketplace add devicki/dev-toolkit && claude plugin install erd@dev-toolkit`
-업데이트: `/plugin marketplace update dev-toolkit` 후 열린 세션에서 `/reload-plugins`
-
-## 플러그인
-
-| 플러그인 | 버전 | 설명 |
-|---|---|---|
-| [erd](plugins/erd) | 0.4.0 | DBML(설계 원본) + tbls(문서·ERD·lint)로 프로젝트 ERD를 설계·문서화·유지보수. 모노레포 지원 |
-| [skill-spy](plugins/skill-spy) | 0.1.0 | (모드) 작업이 끝나면 그 턴에 쓰인 스킬을 토스트로 알림 |
-
-## 플러그인 개발
+From a shell:
 
 ```bash
-scripts/new-plugin.sh <이름> --skill <첫 스킬> --desc "<설명>"   # 스캐폴드 + marketplace 등록
-python3 scripts/validate.py [--base origin/main]                # 구조 검증 (CI 에서도 실행)
-claude plugin validate .                                         # 공식 검증
-plugins/<이름>/tests/run.sh                                      # 플러그인 회귀 테스트
-claude plugin test plugins/<이름>                                # 모드(hooks 모듈) 테스트
+claude plugin marketplace add devicki/dev-toolkit
+claude plugin install erd@dev-toolkit
+claude plugin install skill-spy@dev-toolkit
 ```
 
-작성 규칙: [docs/skill-authoring.md](docs/skill-authoring.md) · 변경 이력: 각 플러그인의 `CHANGELOG.md`
+To update, run `/plugin marketplace update dev-toolkit`, then `/reload-plugins` in any open session.
+
+## skill-spy: see which skills ran
+
+Skills often load without you noticing: Claude picks one from your request, or a subagent preloads one. skill-spy is a **mod** (a plugin with only a hooks module, no skills). When a turn ends, it shows one toast in the top-right corner for each skill that turn used:
+
+```
+╭───────────────────────────╮
+│ skill-spy                 │
+│ 🧩 erd:design ×2          │
+╰───────────────────────────╯
+╭───────────────────────────╮
+│ skill-spy                 │
+│ 🧩 ponytail:ponytail      │
+╰───────────────────────────╯
+```
+
+- **It catches every way a skill starts:** typing `/name`, Claude calling the Skill tool on its own, and a subagent preloading a skill.
+- **Repeats are counted:** if the same skill ran twice in one turn, the toast shows `×2`. A turn without skills shows nothing.
+- **The toast stays for 60 seconds:** click it to close it sooner, or hover over it to keep it open.
+
+How it works: the `skill.prompt` hook counts each skill as it loads. The `turn.complete` hook then shows the toasts and resets the count for the next turn. The whole mod is [`hooks/register.ts`](plugins/skill-spy/hooks/register.ts), about 30 lines.
+
+Limits:
+
+- Under an **organization-managed Claude Code** (for example a company account), `skill.prompt` does not reach plugins you install yourself, so skill-spy stays silent.
+- The toast lasts at most 60 seconds and holds a single line. Both limits come from Claude Code.
+- A mod runs inside Claude Code with your user permissions. It has no sandbox.
+
+More: [plugins/skill-spy/README.md](plugins/skill-spy/README.md).
+
+## erd: schema design to docs
+
+Write the schema in DBML and generate per-module docs, a Mermaid ERD and lint results with tbls, all kept in Git. If a project already has a migration tool (Alembic, Prisma, Flyway, …), that tool stays the source of truth and the docs are derived from it.
+
+| Command | Use |
+|---|---|
+| `/erd:doctor` | Check and install tbls, @dbml/cli and Docker/psql (asks before installing) |
+| `/erd:init` | Scan the project, choose the schema source, install templates |
+| `/erd:import` | Build DBML from source code, ORM models or migrations, ERD/ADR docs, or a live DB |
+| `/erd:design` | Design or change the schema interactively |
+| `/erd:review` | Review the schema against backend and frontend code; findings ranked by severity |
+| `/erd:sync` | Refresh docs, check drift, hook into migration generation, add CI checks |
+
+A plain request works too, for example "design the tables for orders". Skills reply in your language. Files written into the project follow `ERD_LANG=ko|en` in the unit's `erd.env`.
+
+More: [plugins/erd/README.md](plugins/erd/README.md) (Korean, with an English summary).
+
+## Developing plugins
+
+```bash
+scripts/new-plugin.sh <name> --skill <first-skill> --desc "<description>"  # scaffold + add to marketplace
+python3 scripts/validate.py [--base origin/main]                           # repo structure check (also runs in CI)
+claude plugin validate .                                                    # official manifest check
+plugins/<name>/tests/run.sh                                                 # plugin regression tests (erd)
+claude plugin test plugins/<name>                                           # mod tests (hooks module)
+claude --plugin-dir plugins/<name>                                          # run Claude Code with only this plugin loaded
+```
+
+```
+.claude-plugin/marketplace.json   # marketplace catalog
+plugins/<name>/                   # one folder per plugin, each with README.md and CHANGELOG.md
+docs/skill-authoring.md           # skill writing rules
+templates/plugin/                 # scaffold used by new-plugin.sh
+scripts/                          # validate.py, new-plugin.sh
+```
+
+CI (`.github/workflows/validate.yml`) runs `validate.py`, `claude plugin validate .`, the skill-spy tests and the erd tests against Postgres.
+
+Each plugin's changes are in its own `CHANGELOG.md`. Marketplace-level changes are in [CHANGELOG.md](CHANGELOG.md).
+
+## License
+
+[MIT](LICENSE)
