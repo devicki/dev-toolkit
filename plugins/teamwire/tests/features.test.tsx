@@ -114,3 +114,41 @@ test("a herdr pane busy with another session's work leaves the member alone; key
   expect(drawn).not.toContain('lead → grok·p2  Enter')
   await ui.unmount()
 })
+
+test('another Claude session moves with its own status file: working, needs you, idle, ended', async ($, on) => {
+  let t = NOW
+  let file: string | undefined = JSON.stringify({ name: 'finpilot-89', sessionId: 's1', status: 'busy', updatedAt: 1 })
+  const toasts: string[] = []
+  on('clock.now', () => ({ value: (t += 100) }) as never)
+  on('clock.every', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('ui.toast', (_, e) => (toasts.push((e as { text: string }).text), { value: undefined }) as never)
+  on('ui.notify', () => ({ value: { isSent: true, channel: 'terminal' } }) as never)
+  on('env.get', (_, e) => ({ value: (e as { name: string }).name === 'HOME' ? '/home/me' : undefined }) as never)
+  on('fs.list', () => ({ value: file === undefined ? [] : [{ name: '42.json', kind: 'file', size: 1, mtimeMs: 0, isLink: false }, { name: '42.abc.key', kind: 'file', size: 1, mtimeMs: 0, isLink: false }] }) as never)
+  on('fs.read', (_, e) => ((e as { path: string }).path === '/home/me/.claude/sessions/42.json' ? { value: file } : { value: '' }) as never)
+  on('session.send', () => ({ isDelivered: true }) as never)
+  const send = (text: string) => $.session.send({ to: 'finpilot-89', text } as never)
+  const drawn = async () => {
+    const ui = await $.ui.mount({ plugin: 'teamwire', surface: 'terminal', component: 'Pane', requestId: 'teamwire', props: PROPS, viewport: { columns: 112, rows: 60 } } as never)
+    const d = JSON.stringify(await ui.drawn())
+    await ui.unmount()
+    return d
+  }
+
+  await send('Check the backups')
+  expect(await drawn()).toContain(' WORKING ')
+  file = JSON.stringify({ name: 'finpilot-89', sessionId: 's1', status: 'waiting', waitingFor: 'input needed', updatedAt: 2 })
+  await send('Status?')
+  expect(await drawn()).toContain(' NEEDS YOU ')
+  expect(toasts.some(x => x.includes('finpilot-89 needs you'))).toBe(true)
+  file = '' // mid-write: unreadable, keeps its state
+  await send('Status?')
+  expect(await drawn()).toContain(' NEEDS YOU ')
+  file = JSON.stringify({ name: 'finpilot-89', sessionId: 's1', status: 'idle', updatedAt: 3 })
+  await send('Thanks')
+  expect(await drawn()).toContain(' IDLE ')
+  file = undefined // the session ended
+  await send('Bye')
+  expect(await drawn()).toContain(' DONE ')
+})

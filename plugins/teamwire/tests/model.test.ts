@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import type { Member } from '../types'
-import { busyCount, cells, oneLine, padCells, chronicle, dur, fanout, gauge, isStale, kTokens, STALE_MS, flowOf, fromHerdr, herdrCalls, modelOnScreen, runs, shortModel, wireCells } from '../hooks/model'
+import { busyCount, cells, fromSession, sessionFor, oneLine, padCells, chronicle, dur, fanout, gauge, isStale, kTokens, STALE_MS, flowOf, fromHerdr, herdrCalls, modelOnScreen, runs, shortModel, wireCells } from '../hooks/model'
 
 test('herdrCalls finds who the lead talks to, through quotes, options and chains', async () => {
   expect(herdrCalls(`herdr agent prompt wN:p2 "Review the diff; report \\"only\\" bugs" --wait --timeout 120000`)).toEqual([
@@ -110,4 +110,20 @@ test('text is cut by terminal cells, so Hangul never spills past the pane', asyn
   expect(cut).toBe('[상태 조사, owner 요청] Pleas…')
   expect(oneLine('리뷰어', 6)).toBe('리뷰어')
   expect(cells(padCells('리뷰어', 8))).toBe(8)
+})
+
+test('a peer address finds its session by name, socket or id, the freshest first', async () => {
+  const files = [
+    { file: '1.json', name: 'finpilot-89', sessionId: 'a', status: 'idle', updatedAt: 1 },
+    { file: '2.json', name: 'finpilot-89', sessionId: 'b', status: 'busy', updatedAt: 2, messagingSocketPath: '/run/s/2.sock' },
+  ]
+  expect(sessionFor(files, 'finpilot-89')?.file).toBe('2.json')
+  expect(sessionFor(files, 'uds:/run/s/2.sock')?.file).toBe('2.json')
+  expect(sessionFor(files, 'a')?.file).toBe('1.json')
+  expect(sessionFor(files, 'nobody')).toBeUndefined()
+  const m = member({ kind: 'peer', state: 'idle' })
+  expect(fromSession(m, files[1], ['1.json', '2.json'])).toBe('working')
+  expect(fromSession(m, undefined, [])).toBe('idle') // never found: unknown, left alone
+  expect(fromSession({ ...m, session: '2.json' }, undefined, ['1.json'])).toBe('done')
+  expect(fromSession({ ...m, session: '2.json', state: 'blocked' }, undefined, ['2.json'])).toBe('blocked')
 })

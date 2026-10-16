@@ -15,6 +15,7 @@ import {
   flowOf,
   fromAgent,
   fromHerdr,
+  fromSession,
   herdrCalls,
   isStale,
   KIND_LABEL,
@@ -23,6 +24,8 @@ import {
   oneLine,
   padCells,
   runs,
+  sessionFor,
+  type SessionFile,
   shortModel,
   surge,
   upsert,
@@ -233,6 +236,33 @@ const pollHerdr = async ($: EngineInterface) => {
   )
 }
 
+const pollSessions = async ($: EngineInterface) => {
+  if (!(await read($, membersAtom)).some(m => m.kind === 'peer')) return
+  const dir = `${(await $.env.get('CLAUDE_CONFIG_DIR')) || `${await $.env.get('HOME')}/.claude`}/sessions`
+  const entries = await $.fs.list(dir).catch(() => undefined)
+  if (!entries) return
+  const names = entries.map(x => x.name).filter(n => /^\d+\.json$/.test(n))
+  const files: SessionFile[] = []
+  for (const file of names) {
+    try {
+      files.push({ ...(JSON.parse((await $.fs.read(`${dir}/${file}`)) as string) as Omit<SessionFile, 'file'>), file })
+    } catch {
+      // A session starting or rewriting its file leaves it empty for a moment.
+    }
+  }
+  const now = await $.clock.now()
+  await mutate($, list =>
+    list.map(m => {
+      if (m.kind !== 'peer') return m
+      const f = sessionFor(files, m.id.slice('peer:'.length))
+      const state = fromSession(m, f, names)
+      const session = f?.file ?? m.session
+      if (state === m.state && session === m.session) return m
+      return { ...m, state, session, ...(m.state === 'working' && state === 'idle' ? surge('in', now) : {}) }
+    }),
+  )
+}
+
 /** Advances the sparks while current flows, and draws one still frame once it stops. */
 const animate = async ($: EngineInterface) => {
   if (dismissed) return
@@ -254,7 +284,7 @@ export const register: Register = on => {
       ...(u?.context.percent !== undefined ? { ctx: { percent: u.context.percent, tokens: u.context.tokens ?? 0, window: u.context.window } } : {}),
       ...(u?.cost ? { usd: u.cost.usd } : {}),
     }))
-    $.clock.every(POLL_MS, () => void Promise.all([pollAgents($), pollHerdr($), pushStatus($)]).catch(() => undefined))
+    $.clock.every(POLL_MS, () => void Promise.all([pollAgents($), pollHerdr($), pollSessions($), pushStatus($)]).catch(() => undefined))
     $.clock.every(FRAME_MS, () => void animate($).catch(() => undefined))
     if ((await read($, membersAtom)).length) await show($)
     return next(e)
@@ -420,6 +450,7 @@ export const register: Register = on => {
       to = find(await read($, membersAtom), e.to)
     }
     if (to) await patch($, to.id, m => ({ ...m, ...surge('out', now) }))
+    if (to?.kind === 'peer') await pollSessions($).catch(() => undefined)
     if (from !== LEAD) await patch($, from, m => ({ ...m, ...surge('in', now) }))
     if (from !== LEAD && to) await linkUp($, from, to.id)
     await note($, from, toLead ? LEAD : (to?.id ?? e.to), e.text)
