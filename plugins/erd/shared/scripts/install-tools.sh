@@ -7,6 +7,10 @@ set -euo pipefail
 TARGET="${1:-all}"
 FALLBACK_TBLS_VERSION="1.96.1"
 BIN="$HOME/.local/bin"
+# Where tbls releases are downloaded from; overridable so the tests can serve a fake release from file://.
+TBLS_BASE="${ERD_TBLS_BASE:-https://github.com/k1LoW/tbls/releases/download}"
+
+sha256() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1"; else shasum -a 256 "$1"; fi | awk '{print $1}'; }
 
 latest_tbls_version() {
   local url
@@ -15,7 +19,7 @@ latest_tbls_version() {
 }
 
 install_tbls() {
-  local os arch v url tmp
+  local os arch v ext file tmp want got
   os=$(uname -s | tr '[:upper:]' '[:lower:]')
   case "$(uname -m)" in x86_64|amd64) arch=amd64 ;; aarch64|arm64) arch=arm64 ;; *) echo "Unsupported CPU: $(uname -m)"; exit 1 ;; esac
   if [ "$os" = "darwin" ] && command -v brew >/dev/null 2>&1; then
@@ -23,13 +27,19 @@ install_tbls() {
   fi
   v="${2:-$(latest_tbls_version)}"
   mkdir -p "$BIN"; tmp=$(mktemp -d)
-  if [ "$os" = "darwin" ]; then
-    url="https://github.com/k1LoW/tbls/releases/download/v$v/tbls_v${v}_darwin_${arch}.zip"
-    echo "▶ Download: $url"; curl -sSL -o "$tmp/tbls.zip" "$url"; (cd "$tmp" && unzip -q tbls.zip tbls)
-  else
-    url="https://github.com/k1LoW/tbls/releases/download/v$v/tbls_v${v}_linux_${arch}.tar.gz"
-    echo "▶ Download: $url"; curl -sSL "$url" | tar xz -C "$tmp" tbls
+  if [ "$os" = "darwin" ]; then ext=zip; else ext=tar.gz; fi
+  file="tbls_v${v}_${os}_${arch}.$ext"
+  echo "▶ Download: $TBLS_BASE/v$v/$file"
+  curl -fsSL -o "$tmp/$file" "$TBLS_BASE/v$v/$file" || { echo "✘ Download failed: $file"; rm -rf "$tmp"; exit 1; }
+  # The release publishes checksums-<os>.txt; nothing is unpacked unless the archive matches it.
+  curl -fsSL -o "$tmp/checksums.txt" "$TBLS_BASE/v$v/checksums-$os.txt" || { echo "✘ Download failed: checksums-$os.txt"; rm -rf "$tmp"; exit 1; }
+  want=$(awk -v f="$file" '$2 == f {print $1}' "$tmp/checksums.txt")
+  got=$(sha256 "$tmp/$file")
+  if [ -z "$want" ] || [ "$want" != "$got" ]; then
+    echo "✘ Checksum mismatch for $file (expected ${want:-none listed}, got $got). Not installed."; rm -rf "$tmp"; exit 1
   fi
+  echo "✔ sha256 $got"
+  if [ "$ext" = zip ]; then (cd "$tmp" && unzip -q "$file" tbls); else tar xzf "$tmp/$file" -C "$tmp" tbls; fi
   install -m 0755 "$tmp/tbls" "$BIN/tbls"; rm -rf "$tmp"
   echo "✔ tbls $v → $BIN/tbls"
   case ":$PATH:" in *":$BIN:"*) ;; *) echo "▲ $BIN is not on PATH. Add it in your shell config (fish: fish_add_path ~/.local/bin)";; esac
