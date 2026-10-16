@@ -8,7 +8,7 @@ devicki 的 Claude Code 外掛市集，收錄日常開發工作會用到的外�
 |---|---|---|---|
 | [erd](plugins/erd) | 0.4.2 | 技能 | 用 DBML（結構描述的原始來源）和 tbls（文件、Mermaid ERD、lint）設計、記錄並維護專案的 ERD。支援 monorepo。 |
 | [skill-spy](plugins/skill-spy) | 0.1.1 | mod | 每一輪結束時，為該輪用到的每個技能顯示一則提示。 |
-| [teamwire](plugins/teamwire) | 0.1.7 | mod | 以即時配線圖呈現你的代理團隊，像電流一樣顯示領導與每位成員之間的往來。 |
+| [teamwire](plugins/teamwire) | 0.1.8 | mod | 以即時配線圖呈現你的代理團隊，像電流一樣顯示領導與每位成員之間的往來。 |
 
 ## 安裝
 
