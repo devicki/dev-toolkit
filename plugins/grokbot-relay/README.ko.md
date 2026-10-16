@@ -55,6 +55,49 @@ claude plugin marketplace add devicki/dev-toolkit
 claude plugin install grokbot-relay@dev-toolkit
 ```
 
+## 서버 배포 (Linux, systemd)
+
+서버 1대, 서비스 계정 `grokbot` 1개, 사용자 여러 명 구조입니다. 관리자(root)가 설치하고, `grokbot` 그룹에 들어간 일반 사용자가 연결합니다.
+
+| 경로 | 내용 |
+| --- | --- |
+| `/opt/grokbot-relay/relay` | 중계 앱 (소유자 `grokbot`) |
+| `/var/lib/grokbot` | `grokbot` 홈: Cursor 로그인 정보, serve 상태 |
+| `/etc/grokbot-relay/env` | `GROKBOT_RELAY_PORT`, `GROKBOT_RELAY_TOKEN` (640 root:grokbot) |
+
+관리자(root):
+
+```bash
+git clone https://github.com/devicki/dev-toolkit && cd dev-toolkit/plugins/grokbot-relay
+sudo ./deploy/install.sh            # 선택: --port 3000
+sudo -u grokbot -H bash -c 'cd /opt/grokbot-relay/relay && npx bdk login'
+sudo systemctl start grokbot-relay
+sudo systemctl status grokbot-relay --no-pager
+sudo usermod -aG grokbot <사용자1>
+sudo usermod -aG grokbot <사용자2>
+```
+
+일반 사용자 각자 (`usermod` 후 다시 로그인):
+
+```bash
+git clone https://github.com/devicki/dev-toolkit && cd dev-toolkit/plugins/grokbot-relay
+./deploy/connect-claude.sh          # MCP 서버 "grokbot" 등록 (user 범위)
+claude mcp list
+claude plugin marketplace add devicki/dev-toolkit
+claude plugin install grokbot-relay@dev-toolkit
+```
+
+참고:
+- `connect-claude.sh`는 시작할 때마다 `/etc/grokbot-relay/env`를 읽는 `bash -c` 명령을 등록합니다. 그래서 토큰이 Claude Code 설정(`~/.claude.json`)에 **저장되지 않습니다**. 토큰을 직접 넣어 `claude mcp add`를 하면 거기에 평문으로 저장됩니다.
+- 토큰은 프로세스 인자(`--bearer-token`)로 넘어가서 같은 서버의 다른 사용자가 `ps`로 볼 수 있습니다. 공용 서버라면 `/proc`를 `hidepid=2`로 마운트하세요.
+- `grokbot` 그룹 사용자는 토큰 하나를 같이 써서 BDK 호출자 신원(연락 목록, 읽은 위치)과 Grok Bot 계정을 공유합니다.
+- 토큰 교체: env 파일 수정 후 `sudo systemctl restart grokbot-relay`. 사용자는 다시 할 일이 없습니다.
+
+**서버에서 확인 필요**
+- 유닛의 `bdk serve` 옵션: `--host 127.0.0.1 --port`, `--mode single`(MCP 경로 `/v1/mcp`), `--bearer-token` (0.2.25 CLI 문서 기준, 아직 실행 안 함)
+- `/var/lib/grokbot` 아래 CLI 설정에 저장되는 `bdk login` 정보가 재부팅 후에도 남고, 하드닝된 유닛에서도 읽히는지
+- 화면 없는 서버에서 `bdk login`이 로그인 링크를 출력해 다른 브라우저로 열 수 있는지
+
 ## 안전
 
 - `serve`는 루프백에서만 여세요. 밖으로 열려면 인증 프록시를 앞에 두세요.

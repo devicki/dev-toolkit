@@ -55,6 +55,49 @@ claude plugin marketplace add devicki/dev-toolkit
 claude plugin install grokbot-relay@dev-toolkit
 ```
 
+## Server deployment (Linux, systemd)
+
+One server, one service account `grokbot`, several users. An admin (root) installs; regular users in the `grokbot` group connect.
+
+| Path | What |
+| --- | --- |
+| `/opt/grokbot-relay/relay` | relay app (owner `grokbot`) |
+| `/var/lib/grokbot` | `grokbot` home: Cursor login + serve state |
+| `/etc/grokbot-relay/env` | `GROKBOT_RELAY_PORT`, `GROKBOT_RELAY_TOKEN` (640 root:grokbot) |
+
+Admin (root):
+
+```bash
+git clone https://github.com/devicki/dev-toolkit && cd dev-toolkit/plugins/grokbot-relay
+sudo ./deploy/install.sh            # optional: --port 3000
+sudo -u grokbot -H bash -c 'cd /opt/grokbot-relay/relay && npx bdk login'
+sudo systemctl start grokbot-relay
+sudo systemctl status grokbot-relay --no-pager
+sudo usermod -aG grokbot <user1>
+sudo usermod -aG grokbot <user2>
+```
+
+Each regular user (log out and back in after `usermod`):
+
+```bash
+git clone https://github.com/devicki/dev-toolkit && cd dev-toolkit/plugins/grokbot-relay
+./deploy/connect-claude.sh          # registers MCP server "grokbot" (user scope)
+claude mcp list
+claude plugin marketplace add devicki/dev-toolkit
+claude plugin install grokbot-relay@dev-toolkit
+```
+
+Notes:
+- `connect-claude.sh` stores a `bash -c` command that reads `/etc/grokbot-relay/env` at start, so the token is **not** written into Claude Code's config (`~/.claude.json`). If you use `claude mcp add` with the token inline instead, it is stored there in plain text.
+- The token is still passed as a process argument (`--bearer-token`), so other local users may see it in `ps`. On a shared server, mount `/proc` with `hidepid=2` or accept that group members and admins can see it.
+- Everyone in the `grokbot` group shares one token, so they share one BDK caller identity (contact list and read positions) and the same Grok Bot account.
+- Rotate the token: edit the env file, `sudo systemctl restart grokbot-relay`, users re-run nothing (it is read at each start).
+
+**VERIFY ON THE SERVER**
+- `bdk serve` flags in the unit: `--host 127.0.0.1 --port`, `--mode single` (MCP at `/v1/mcp`), `--bearer-token` (from the 0.2.25 CLI reference, not run yet).
+- Whether the `bdk login` credential (stored in the CLI config dir under `/var/lib/grokbot`) survives reboot and works under the hardened unit.
+- That `bdk login` works on a headless server (it prints a sign-in link to open in any browser).
+
 ## Safety
 
 - Keep `serve` on loopback. Put an authenticating proxy in front before exposing it anywhere.
