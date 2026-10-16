@@ -8,7 +8,7 @@ devicki의 Claude Code 플러그인 마켓플레이스입니다. 일상 개발 �
 |---|---|---|---|
 | [erd](plugins/erd) | 0.4.1 | 스킬 | DBML(설계 원본)과 tbls(문서·Mermaid ERD·lint)로 프로젝트 ERD를 설계·문서화·유지보수합니다. 모노레포 지원 |
 | [skill-spy](plugins/skill-spy) | 0.1.1 | 모드 | 턴이 끝나면 그 턴에 쓰인 스킬을 토스트로 알려줍니다 |
-| [teamwire](plugins/teamwire) | 0.1.5 | 모드 | 팀 작업을 실시간 배선도로 보여주고, 팀장과 팀원 사이의 흐름을 전류처럼 표시합니다 |
+| [teamwire](plugins/teamwire) | 0.1.6 | 모드 | 팀 작업을 실시간 배선도로 보여주고, 팀장과 팀원 사이의 흐름을 전류처럼 표시합니다 |
 
 ## 설치
 

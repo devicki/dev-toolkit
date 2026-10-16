@@ -98,6 +98,23 @@ export const clip = (s: string, max: number) => {
   return `${out}…`
 }
 
+/** A row of spans cut to `max` cells, the span that crosses the edge clipped with …; a `pick` span also takes `btn` cells of button frame. */
+export function fitRow<S extends { t: string; pick?: unknown }>(segs: S[], max: number, btn = 0): S[] {
+  const out: S[] = []
+  let w = 0
+  for (const s of segs) {
+    const frame = s.pick ? btn : 0
+    if (w + cells(s.t) + frame <= max) {
+      out.push(s)
+      w += cells(s.t) + frame
+      continue
+    }
+    if (max - w - frame > 1) out.push({ ...s, t: clip(s.t, max - w - frame) })
+    break
+  }
+  return out
+}
+
 /** `s` padded with spaces to `w` cells. */
 export const padCells = (s: string, w: number) => s + ' '.repeat(Math.max(0, w - cells(s)))
 
@@ -189,6 +206,25 @@ export function wireCells(len: number, dir: Dir | undefined, tick: number, gap =
     cells[i] = k === 0 ? 1 : k === (dir === 'out' ? gap - 1 : 1) ? 2 : 0
   }
   return cells
+}
+
+/** Where a light sweeping over `len` characters of a busy name stands at `tick`; -1 while it rests between passes. */
+export const shineAt = (len: number, tick: number, offset = 0) => {
+  const p = (((tick + offset) % (len + 8)) + len + 8) % (len + 8)
+  return p < len ? p : -1
+}
+
+/** A text split around the light at `at`: the spark itself (2), its glow on either side (1), the rest (0). */
+export function shineRuns(text: string, at: number): { t: string; v: 0 | 1 | 2 }[] {
+  const out: { t: string; v: 0 | 1 | 2 }[] = []
+  ;[...text].forEach((ch, i) => {
+    const d = Math.abs(i - at)
+    const v = at < 0 ? 0 : d === 0 ? 2 : d === 1 ? 1 : 0
+    const last = out[out.length - 1]
+    if (last && last.v === v) last.t += ch
+    else out.push({ t: ch, v })
+  })
+  return out
 }
 
 /** Runs of equal values, for drawing a wire as few Text spans. */

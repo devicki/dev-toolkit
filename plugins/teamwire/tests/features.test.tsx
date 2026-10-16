@@ -152,3 +152,29 @@ test('another Claude session moves with its own status file: working, needs you,
   await send('Bye')
   expect(await drawn()).toContain(' DONE ')
 })
+
+test('a short pane says which sections it had no room for', async ($, on) => {
+  let t = NOW
+  on('clock.now', () => ({ value: (t += 100) }) as never)
+  on('clock.every', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('ui.toast', () => ({ value: undefined }) as never)
+  on('process.run', (_, e) => ok((e as { argv: string[] }).argv[2] === 'read' ? '' : herdr('working')))
+  on('tool.call', () => ({ result: 'ok', text: 'ok' }) as never)
+  await $.tool.call({ tool: 'Bash', command: `herdr agent prompt wN:p2 "Review the diff"` } as never)
+
+  const mount = async (bodyRows: number) => {
+    const ui = await $.ui.mount({ plugin: 'teamwire', surface: 'terminal', component: 'Pane', requestId: 'teamwire', props: { ...PROPS, scroll: { offset: 0, bodyRows } }, viewport: { columns: 112, rows: bodyRows } } as never)
+    const d = JSON.stringify(await ui.drawn())
+    await ui.unmount()
+    return d
+  }
+  const short = await mount(16)
+  expect(short).toContain('hidden · a taller pane shows them')
+  expect(short).toContain('+ COMMS 1 hidden')
+  expect(short).toContain('joined as herdr') // ACTIVITY still fits
+  expect(await mount(12)).toContain('+ ACTIVITY 1 · COMMS 1 hidden')
+  const tall = await mount(60)
+  expect(tall).not.toContain('hidden ·')
+  expect(tall).toContain('1 handoffs')
+})
