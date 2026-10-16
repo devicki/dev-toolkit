@@ -36,7 +36,7 @@
 |---|---|---|
 | 서브에이전트, agent teams 팀원 | `agent.spawn`, `$.agent.list()`, `session.send` / `session.receive`. 모델과 effort는 매 모델 요청(`turn.step`), 승인 대기는 `tool.check`, 도구 호출 수와 토큰은 `tool.call` / `turn.complete`에서 | 없음 |
 | 팀장 | `session.measure`(context, 비용), `turn.start` / `turn.complete` | 없음 |
-| 다른 Claude 세션 | 팀장의 SendMessage (`session.send`) | 없음 |
+| 다른 Claude 세션 | 팀장의 SendMessage (`session.send`). 상태는 2초마다 각 세션의 상태 파일(`~/.claude/sessions/*.json`, 읽기만)에서: 작업 중, 승인·질문 대기, 대기, 종료 | 없음 |
 | herdr 패널의 CLI 에이전트 | 팀장이 실행한 `herdr agent prompt / send-keys / read / wait`. 상태는 2초마다 `herdr agent list`, 모델은 에이전트 화면 하단에서 한 번 읽음 | [herdr](https://herdr.dev) |
 
 herdr가 없으면 외부 CLI 팀원만 빼고 모두 동작합니다.
@@ -55,9 +55,9 @@ herdr가 없으면 외부 CLI 팀원만 빼고 모두 동작합니다.
 - **토큰을 쓰지 않습니다.** 훅은 Claude Code 안에서만 실행되고, 프롬프트나 대화에 아무것도 넣지 않습니다. 드는 비용은 로컬 자원뿐입니다. herdr 팀원이 있을 때 2초마다 `herdr agent list` 한 번, 전류가 흐르는 동안 초당 약 7번 다시 그리기.
 - 단축키(`c`, `l`, `1`~`9`)는 패널에 포커스가 있을 때 동작합니다. 패널을 클릭하거나 ctrl+x tab.
 - 패널이 자동으로 열리려면 터미널 폭이 144칸 이상이어야 합니다(한 번 직접 연 뒤에는 110칸).
-- 모드는 Claude Code 안에서 사용자 권한으로 실행되며 샌드박스가 없습니다. teamwire가 실행하는 명령은 `herdr`뿐입니다.
+- 모드는 Claude Code 안에서 사용자 권한으로 실행되며 샌드박스가 없습니다. teamwire가 실행하는 명령은 `herdr`뿐이고, 파일은 쓰지 않습니다. 다른 세션의 상태 파일은 읽기만 합니다.
 - 조직이 관리하는 Claude Code에서는 직접 설치한 플러그인에 이 이벤트들이 전달되지 않을 수 있습니다.
-- 알려진 한계: 변수나 스크립트로 감싼 herdr 호출은 감지하지 못합니다. CLI 모델은 지금의 화면 하단 문구를 기준으로 읽습니다. 팀원끼리 주고받는 메시지는 별도 선 없이 양쪽 선이 함께 반짝입니다.
+- 알려진 한계: 변수나 스크립트로 감싼 herdr 호출은 감지하지 못합니다. CLI 모델은 지금의 화면 하단 문구를 기준으로 읽습니다. 다른 세션의 상태는 Claude Code 내부 상태 파일에서 읽으므로, 그 형식이 바뀌면 해당 팀원은 마지막 상태에 머뭅니다. 팀원끼리 주고받는 메시지는 별도 선 없이 양쪽 선이 함께 반짝입니다.
 
 ## 개발
 

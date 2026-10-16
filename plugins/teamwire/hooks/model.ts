@@ -132,6 +132,28 @@ export function fromHerdr(m: Member, status: string | undefined, now: number): M
   return m.state
 }
 
+/**
+ * The fields teamwire reads from a Claude session's own status file, `<config dir>/sessions/<pid>.json`.
+ * shortcut: Claude Code's internal file, not an API; if its shape changes, peers simply stop moving.
+ */
+export type SessionFile = { file: string; name?: string; sessionId?: string; messagingSocketPath?: string; status?: string; updatedAt?: number }
+
+/** The session a peer address names: by name, socket or session id; the freshest when names repeat. */
+export const sessionFor = (files: SessionFile[], to: string) =>
+  files
+    .filter(f => f.name === to || f.sessionId === to || (!!f.messagingSocketPath && to.endsWith(f.messagingSocketPath)))
+    .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0]
+
+/** A peer session's status as a member state. `files` lists every status file present, read or not. */
+export function fromSession(m: Member, f: SessionFile | undefined, files: string[]): MemberState {
+  // Once found, its file gone means the session ended; a file present but unreadable is mid-write.
+  if (!f) return m.session && !files.includes(m.session) ? 'done' : m.state
+  if (f.status === 'busy') return 'working'
+  if (f.status === 'waiting') return 'blocked'
+  if (f.status === 'idle') return 'idle'
+  return m.state
+}
+
 /** A Claude agent's AgentStatus as a member state. */
 export function fromAgent(status: string): MemberState {
   if (status === 'running' || status === 'pending') return 'working'

@@ -31,6 +31,8 @@ export type Member = {
   outTokens?: number
   /** A tool call of its own is waiting on the person's approval. */
   asking?: boolean
+  /** peer: the status file (`<pid>.json` under the Claude config dir's `sessions/`) it was found in. */
+  session?: string
   /** herdr: the pane it lives in, once resolved. */
   pane?: string
   /** herdr: when the lead last prompted it; idle reports just after are stale. */

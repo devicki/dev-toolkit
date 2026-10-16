@@ -34,7 +34,7 @@ Each kind of member hangs on its own wire:
 |---|---|---|
 | Subagents, teammates | `agent.spawn`, `$.agent.list()`, `session.send` / `session.receive`; model and effort from each model request (`turn.step`); approvals from `tool.check`; tool calls and tokens from `tool.call` / `turn.complete` | nothing |
 | The lead | `session.measure` (context window, cost), `turn.start` / `turn.complete` | nothing |
-| Other Claude sessions | the lead's SendMessage (`session.send`) | nothing |
+| Other Claude sessions | the lead's SendMessage (`session.send`); state from each session's status file (`~/.claude/sessions/*.json`, read only) every 2 s: busy, waiting on an approval or a question, idle, ended | nothing |
 | CLI agents in herdr panes | the lead's `herdr agent prompt / send-keys / read / wait` commands; state from `herdr agent list` every 2 s; model read once from the agent's footer | [herdr](https://herdr.dev) |
 
 Without herdr, everything but the external CLI agents works.
@@ -53,9 +53,9 @@ The pane opens by itself on the first handoff. Close it and it stays closed for 
 - **No tokens.** Hooks run inside Claude Code; nothing is added to the prompt or the conversation. The cost is local: one `herdr agent list` every 2 s while herdr members exist, and redraws (~7 per second) while current flows.
 - Press keys (`c`, `l`, `1`–`9`) reach the pane once it holds the focus: click it, or ctrl+x tab.
 - The pane opens unasked only on a terminal 144 columns or wider (110 once you have opened it).
-- A mod runs inside Claude Code with your user permissions. It has no sandbox. teamwire runs the `herdr` command and nothing else.
+- A mod runs inside Claude Code with your user permissions. It has no sandbox. teamwire runs the `herdr` command and nothing else, and writes no files; it reads other sessions' status files only.
 - Under an organization-managed Claude Code, plugins you install yourself may not receive these events.
-- Known limits: herdr calls built from variables or scripts are not detected; the CLI model is read from footers as they look today; messages between two members flash both wires instead of drawing a wire of their own.
+- Known limits: herdr calls built from variables or scripts are not detected; the CLI model is read from footers as they look today; another session's state comes from Claude Code's internal status file, so a change to that file would leave such members at their last state; messages between two members flash both wires instead of drawing a wire of their own.
 
 ## Development
 
