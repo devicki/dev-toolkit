@@ -1,4 +1,4 @@
-import type { Beat, Dir, Member, MemberState } from '../types'
+import type { Beat, Dir, Member, MemberState, Msg } from '../types'
 
 export const LEAD = 'lead'
 export const BURST_MS = 4000
@@ -113,6 +113,36 @@ export function fitRow<S extends { t: string; pick?: unknown }>(segs: S[], max: 
     break
   }
   return out
+}
+
+/** `s` in lines of at most `w` cells, broken between words (a word wider than a line is split); past `max` lines the last ends in …. */
+export function wrapCells(s: string, w: number, max = 3): string[] {
+  const out: string[] = []
+  let line = ''
+  for (const word of s.split(' ')) {
+    let rest = word
+    let next = line ? `${line} ${rest}` : rest
+    while (cells(next) > w) {
+      if (line) {
+        out.push(line)
+        line = ''
+        next = rest
+        continue
+      }
+      let head = ''
+      for (const ch of rest) {
+        if (cells(head + ch) > w) break
+        head += ch
+      }
+      out.push(head)
+      rest = rest.slice(head.length)
+      next = rest
+    }
+    line = next
+  }
+  if (line) out.push(line)
+  // The line after the last shown one didn't fit beside it, so joining them always overflows and clips to ….
+  return out.length > max ? [...out.slice(0, max - 1), clip(out.slice(max - 1).join(' '), w)] : out
 }
 
 /** `s` padded with spaces to `w` cells. */
@@ -265,7 +295,7 @@ export const dur = (ms: number) => {
  * What changed between two rosters: ACTIVITY lines, and the clocks to set on the members that moved
  * (`since` for work begun, `stateAt` for any change, `took` for work ended).
  */
-export function chronicle(before: Member[], after: Member[], now: number): { beats: Beat[]; patches: Record<string, Partial<Member>> } {
+export function chronicle(before: Member[], after: Member[], now: number, msgs: Msg[] = []): { beats: Beat[]; patches: Record<string, Partial<Member>> } {
   const beats: Beat[] = []
   const patches: Record<string, Partial<Member>> = {}
   const started: string[] = []
@@ -284,6 +314,9 @@ export function chronicle(before: Member[], after: Member[], now: number): { bea
     if (m.state === 'working') {
       beat(m.id, 'work', p.state === 'blocked' ? 'resumed' : 'took a new task')
       started.push(m.id)
+      // What woke it is the lead's last word to it since it stopped; a protocol message (JSON) is no task.
+      const brief = p.state === 'blocked' ? undefined : msgs.findLast(x => x.from === LEAD && x.to === m.id && x.at >= (p.stateAt ?? p.addedAt))
+      if (brief && !/^\s*[{[]/.test(brief.text)) patches[m.id] = { ...patches[m.id], role: brief.text }
     } else if (m.state === 'reply') beat(m.id, 'reply', `finished${took ? ` in ${took}` : ''} · reply ready`)
     else if (m.state === 'done') beat(m.id, 'done', `done${took ? ` in ${took}` : ''}`)
     else if (m.state === 'failed') beat(m.id, 'fail', `failed${took ? ` after ${took}` : ''}`)

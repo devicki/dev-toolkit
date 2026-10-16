@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import type { Member } from '../types'
-import { busyCount, cells, fitRow, shineAt, shineRuns, fromSession, sessionFor, oneLine, padCells, chronicle, dur, fanout, gauge, isStale, kTokens, STALE_MS, flowOf, fromHerdr, herdrCalls, modelOnScreen, runs, shortModel, wireCells } from '../hooks/model'
+import { busyCount, cells, fitRow, shineAt, shineRuns, fromSession, sessionFor, oneLine, padCells, chronicle, dur, fanout, gauge, isStale, kTokens, STALE_MS, flowOf, fromHerdr, herdrCalls, modelOnScreen, runs, shortModel, wireCells, wrapCells } from '../hooks/model'
 
 test('herdrCalls finds who the lead talks to, through quotes, options and chains', async () => {
   expect(herdrCalls(`herdr agent prompt wN:p2 "Review the diff; report \\"only\\" bugs" --wait --timeout 120000`)).toEqual([
@@ -84,6 +84,23 @@ test('activity: joins, finishes with how long they took, approvals and reads', a
   expect(chronicle([{ ...base, state: 'idle' }], [base], 0)).toEqual({ beats: [{ at: 0, who: 'm', kind: 'work', text: 'took a new task' }], patches: { m: { stateAt: 0, since: 0 } } })
   expect(chronicle([base], [base], 9).beats).toEqual([])
   expect([dur(800), dur(80_000), dur(7_500_000)]).toEqual(['1s', '1m 20s', '2h 5m'])
+})
+
+test('a member woken by the lead takes that message as its task; an older one or a protocol message does not', async () => {
+  const idle = member({ id: 'm', state: 'idle', role: 'map the hooks', stateAt: 50 })
+  const work = { ...idle, state: 'working' as const }
+  const say = (at: number, text: string, to = 'm') => ({ at, from: 'lead', to, text })
+  expect(chronicle([idle], [work], 90, [say(10, 'map the hooks'), say(60, 'count handlers per event'), say(70, 'other', 'x')]).patches.m!.role).toBe('count handlers per event')
+  expect(chronicle([idle], [work], 90, [say(10, 'before it stopped')]).patches.m!.role).toBeUndefined()
+  expect(chronicle([idle], [work], 90, [say(60, '{"type":"shutdown_request"}')]).patches.m!.role).toBeUndefined()
+  expect(chronicle([{ ...idle, state: 'blocked' }], [work], 90, [say(60, 'yes, go ahead')]).patches.m!.role).toBeUndefined()
+})
+
+test('FOCUS wraps a task between words, splits a word too long for a line, and ends a cut one in …', async () => {
+  expect(wrapCells('List every hook event that register.tsx registers', 20)).toEqual(['List every hook', 'event that', 'register.tsx regist…'])
+  expect(wrapCells('abcdefghij klm', 4)).toEqual(['abcd', 'efgh', 'ij …'])
+  expect(wrapCells('훅 이벤트를 모두 나열', 10)).toEqual(['훅', '이벤트를', '모두 나열'])
+  expect(wrapCells('short', 20)).toEqual(['short'])
 })
 
 test('context gauge: cells filled by share, colour by how full', async () => {

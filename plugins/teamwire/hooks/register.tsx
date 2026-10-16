@@ -33,6 +33,7 @@ import {
   surge,
   upsert,
   wireCells,
+  wrapCells,
 } from './model'
 
 const PANE = 'teamwire'
@@ -102,10 +103,11 @@ const mutate = async ($: EngineInterface, fn: (list: Member[]) => Member[]) => {
   let busyBefore = 0
   let busyAfter = 0
   let after: Member[] = []
+  const msgs = await read($, msgsAtom)
   // Diffed inside the update, against the list it actually changes: two polls racing must not report one change twice.
   await update($, membersAtom, list => {
     const next = fn(list)
-    const c = chronicle(list, next, now)
+    const c = chronicle(list, next, now, msgs)
     beats = c.beats
     busyBefore = busyCount(list)
     busyAfter = busyCount(next)
@@ -170,7 +172,7 @@ const wire = async ($: EngineInterface, id: string, fresh: Omit<Member, 'id' | '
 
 const note = async ($: EngineInterface, from: string, to: string, text: string) => {
   const at = await $.clock.now()
-  await update($, msgsAtom, list => [...list, { at, from, to, text: oneLine(text, 120) }].slice(-20))
+  await update($, msgsAtom, list => [...list, { at, from, to, text: oneLine(text, 400) }].slice(-20))
 }
 
 /** What a model request says the loop runs on: the truth for subagents, whose spawn only names an alias. */
@@ -660,23 +662,9 @@ export const register: Register = on => {
     if (selected) {
       const m = selected
       const label = (t: string) => ({ t: t.padEnd(9), d: true })
-      const wrap = (t: string, w: number) => {
-        const out: string[] = []
-        let line = ''
-        for (const ch of t) {
-          if (cells(line + ch) > w) {
-            out.push(line)
-            if (out.length === 3) return out
-            line = ''
-          }
-          line += ch
-        }
-        if (line) out.push(line)
-        return out
-      }
       focus.push([label('state'), { t: ` ${BADGE[m.state]} `, c: INK, bg: COLOR[m.state], b: true }, { t: `  for ${dur(now - (m.stateAt ?? m.addedAt))}`, d: true }])
       focus.push([label('agent'), { t: [KIND_LABEL[m.kind], m.engine, m.model, m.effort].filter(Boolean).join(' · ') }])
-      wrap(m.role || '—', W - 10).forEach((t, i) => focus.push([label(i ? '' : 'task'), { t }]))
+      wrapCells(m.role || '—', W - 10).forEach((t, i) => focus.push([label(i ? '' : 'task'), { t }]))
       focus.push([label('spend'), { t: metrics(m) || '—' }])
       const said = msgs.filter(x => x.from === m.id || x.to === m.id).slice(-2)
       said.forEach((x, i) => focus.push([label(i ? '' : 'comms'), { t: `${nameOf(x.from)} → ${nameOf(x.to)}  `, c: GOLD }, { t: oneLine(x.text, W - 40), d: true }, { t: `  ${ago(now - x.at)}`, d: true }]))
