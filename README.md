@@ -9,6 +9,7 @@ A Claude Code plugin marketplace by devicki: plugins and mods for day-to-day dev
 | [erd](plugins/erd) | 0.4.2 | Skills | Design, document and maintain project ERDs with DBML (source of truth) and tbls (docs, Mermaid ERD, lint). Monorepo aware. |
 | [skill-spy](plugins/skill-spy) | 0.1.1 | Mod | When a turn ends, shows a toast for each skill that turn used. |
 | [teamwire](plugins/teamwire) | 0.1.8 | Mod | A live wiring diagram of your agent team, with current flowing between the lead and each member. |
+| [grokbot-relay](plugins/grokbot-relay) | 0.4.0 | Skills | Ask your Grok Bot agents from Claude Code through a local MCP relay, and hand session work to Feedhand as a post request. |
 
 ## Install
 
@@ -19,6 +20,7 @@ Inside Claude Code:
 /plugin install erd@dev-toolkit
 /plugin install skill-spy@dev-toolkit
 /plugin install teamwire@dev-toolkit
+/plugin install grokbot-relay@dev-toolkit
 ```
 
 From a shell:
@@ -28,6 +30,7 @@ claude plugin marketplace add devicki/dev-toolkit
 claude plugin install erd@dev-toolkit
 claude plugin install skill-spy@dev-toolkit
 claude plugin install teamwire@dev-toolkit
+claude plugin install grokbot-relay@dev-toolkit
 ```
 
 To update, run `/plugin marketplace update dev-toolkit`, then `/reload-plugins` in any open session.
@@ -64,6 +67,19 @@ When the lead session hands out work, a `Team` pane opens with a wiring diagram:
 - It uses no tokens: the hooks only observe events and draw the pane.
 
 More: [plugins/teamwire/README.md](plugins/teamwire/README.md).
+
+## grokbot-relay: talk to your Grok Bot agents
+
+Two skills that use the grokbot MCP relay from [devicki/grokbot-relay](https://github.com/devicki/grokbot-relay) (a local Cursor BDK server; set it up first).
+
+| Command | Use |
+|---|---|
+| `/grokbot-relay:grokbot-relay` | Ask an allowed bot one question and bring back the reply |
+| `/grokbot-relay:feedhand-handoff` | Turn this session's work (git log, PRs, changes) into a post request for Feedhand, sent only after you confirm |
+
+Claude never writes the final post or approves it: Feedhand drafts, and you approve in the Feedhand chat.
+
+More: [plugins/grokbot-relay/README.md](plugins/grokbot-relay/README.md).
 
 ## erd: schema design to docs
 

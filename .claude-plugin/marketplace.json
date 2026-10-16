@@ -24,7 +24,7 @@
     {
       "name": "grokbot-relay",
       "source": "./plugins/grokbot-relay",
-      "description": "Claude Code·Cursor에서 로컬 BDK 중계로 내 Grok Bot 에이전트에게 질문하고 답을 받아오는 플러그인. Feedhand 게시는 요청만, 승인은 Feedhand 채팅에서."
+      "description": "Claude Code에서 로컬 grokbot MCP 중계로 내 Grok Bot 에이전트에게 묻고, 세션에서 한 작업을 Feedhand 게시 요청으로 넘기는 스킬. 중계 서버는 devicki/grokbot-relay, 게시 승인은 Feedhand 채팅에서만."
     }
   ]
 }

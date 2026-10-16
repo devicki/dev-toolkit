@@ -9,6 +9,7 @@ devicki による Claude Code プラグインマーケットプレイスです�
 | [erd](plugins/erd) | 0.4.2 | スキル | DBML（スキーマの原本）と tbls（ドキュメント、Mermaid ERD、lint）で、プロジェクトの ERD を設計・文書化・保守します。モノレポ対応。 |
 | [skill-spy](plugins/skill-spy) | 0.1.1 | mod | ターンが終わると、そのターンで使われたスキルごとにトーストを表示します。 |
 | [teamwire](plugins/teamwire) | 0.1.8 | mod | エージェントチームをリアルタイムの配線図で表示し、リードと各メンバーの間の流れを電流のように見せます。 |
+| [grokbot-relay](plugins/grokbot-relay) | 0.4.0 | スキル | Claude Code からローカル MCP リレー経由で自分の Grok Bot エージェントに質問し、セッションの作業を Feedhand への投稿リクエストとして渡します。 |
 
 ## インストール
 
@@ -19,6 +20,7 @@ Claude Code の中で:
 /plugin install erd@dev-toolkit
 /plugin install skill-spy@dev-toolkit
 /plugin install teamwire@dev-toolkit
+/plugin install grokbot-relay@dev-toolkit
 ```
 
 シェルから:
@@ -28,6 +30,7 @@ claude plugin marketplace add devicki/dev-toolkit
 claude plugin install erd@dev-toolkit
 claude plugin install skill-spy@dev-toolkit
 claude plugin install teamwire@dev-toolkit
+claude plugin install grokbot-relay@dev-toolkit
 ```
 
 更新するには `/plugin marketplace update dev-toolkit` を実行し、開いているセッションで `/reload-plugins` を実行します。
@@ -64,6 +67,19 @@ claude plugin install teamwire@dev-toolkit
 - トークンを使いません。フックはイベントを観察してペインを描くだけです。
 
 詳細: [plugins/teamwire/README.ja.md](plugins/teamwire/README.ja.md)
+
+## grokbot-relay: 自分の Grok Bot エージェントと話す
+
+[devicki/grokbot-relay](https://github.com/devicki/grokbot-relay) の grokbot MCP リレー（ローカルの Cursor BDK サーバー、先にセットアップ）を使うスキル 2 つです。
+
+| コマンド | 用途 |
+|---|---|
+| `/grokbot-relay:grokbot-relay` | 許可されたボットに質問し、返事を持ち帰る |
+| `/grokbot-relay:feedhand-handoff` | このセッションの作業（git log、PR、変更）を Feedhand への投稿リクエストにし、確認後にだけ送る |
+
+最終的な投稿文の作成と承認は Claude が行いません。Feedhand が下書きし、承認は Feedhand のチャットで行います。
+
+詳細: [plugins/grokbot-relay/README.ja.md](plugins/grokbot-relay/README.ja.md)
 
 ## erd: スキーマ設計からドキュメントまで
 

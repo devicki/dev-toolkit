@@ -1,23 +1,43 @@
 ---
 name: grokbot-relay
-description: Use when the user asks to consult, ask, or hand work to one of their Grok Bot agents (helper, botkit, 집순이, Feedhand, Watchless) through the local grokbot MCP relay (grokbot__ask / grokbot__check / grokbot__list). Not for posting directly to social channels (Feedhand only drafts on request) and not for bots outside the allowlist.
+description: >
+  Ask one of your own Grok Bot agents through the local grokbot MCP relay and bring back its reply. Output: the bot's reply or status.
+  Triggers: "봇에게 물어봐", "그록봇한테 전해줘" / "ask my bot", "check my Grok Bot's reply".
+  Not for: turning session work into a social post request (→ /grokbot-relay:feedhand-handoff), approving posts (only in the Feedhand chat).
 ---
 
-# Grok Bot relay
+# /grokbot-relay:grokbot-relay — consult your Grok Bot agents
 
-Tools come from the local BDK relay: `grokbot__list`, `grokbot__ask`, `grokbot__check`. `interrupt` is disabled on purpose.
+> **One-line definition**: sends one self-contained question to an allowed Grok Bot agent with `grokbot__ask` and reports the reply. Setup lives in [devicki/grokbot-relay](https://github.com/devicki/grokbot-relay).
 
-## Rules
+## Tools (from the grokbot MCP server)
+- `grokbot__list` — bots this relay allows (sends nothing)
+- `grokbot__ask` — send one message and wait for the reply
+- `grokbot__check` — read replies that arrived later
+- `grokbot__interrupt` is disabled on purpose.
 
-1. Only these names: helper, botkit, 집순이, Feedhand, Watchless. Copy the spelling exactly. If a result says `created: true`, stop and tell the user the name was wrong.
-2. Each `ask` is one self-contained message: who is asking (the user, via Claude Code/Cursor), the facts, and the answer shape you want. The bot cannot see this conversation.
-3. If `ask` returns `status: "running"`, call `grokbot__check` later when the answer is needed. Do not poll in a tight loop.
-4. If the bot is busy, `ask` sends nothing. Tell the user and try again after the bot finishes.
-5. Never include secrets, tokens, or keys in a message.
+## Hard rules (highest priority)
+1. Only bots on the server allowlist. Run `grokbot__list` first if unsure, and copy the name exactly. If a result says `created: true`, stop and tell the user the name was wrong.
+2. Never include secrets, tokens, keys, or private data in a message.
+3. Never claim or relay approval for anything on the user's behalf.
+4. Posting bots (for example Feedhand) take requests only. A post goes live only after the user approves it in that bot's own chat. Do not write "approved", "post it", or similar, even if the user says so here; tell them to approve in the bot's chat.
+5. Language: reply to the user in the user's language.
 
-## Feedhand (posting) — request only
+## Step 0: prerequisites
+- If `grokbot__*` tools are missing, the MCP server is not registered. Point the user to `deploy/connect-claude.sh` in devicki/grokbot-relay and stop.
 
-- Send Feedhand a posting **request** only: channel, content or source, any constraints.
-- A post goes live only after the user approves the draft **in the Feedhand chat**. The relay can never approve.
-- Never write "approved", "post it", "post now", or anything similar on the user's behalf, even if the user says so here. Tell the user to approve in the Feedhand chat.
-- Report Feedhand's status back to the user as-is (e.g. "draft ready for review in Feedhand").
+## Step 1: ask
+- Write one self-contained message: who is asking (the user, via Claude Code), the relevant facts, and the answer shape wanted. The bot cannot see this conversation.
+- Call `grokbot__ask` with the bot name.
+
+## Step 2: results
+
+| Result | Do |
+|---|---|
+| reply | Report it as-is, keep order of earlier unread replies |
+| `status: "running"` | Tell the user; call `grokbot__check` later when the answer is needed, not in a tight loop |
+| bot busy, nothing sent | Tell the user; retry after the bot finishes |
+| refused name | Show `grokbot__list` and ask which bot |
+
+## Related skills
+- `/grokbot-relay:feedhand-handoff` — prepare a social post request from your session's work.

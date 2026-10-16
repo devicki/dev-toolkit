@@ -1,7 +1,7 @@
 {
   "name": "grokbot-relay",
-  "version": "0.3.0",
-  "description": "Claude Code/Cursor에서 로컬 BDK 중계를 통해 내 Grok Bot 에이전트(helper, botkit, 집순이, Feedhand, Watchless)에게 질문하고 답을 받아옵니다.",
+  "version": "0.4.0",
+  "description": "Claude Code에서 로컬 grokbot MCP 중계로 내 Grok Bot 에이전트에게 묻고, 세션 작업을 Feedhand 게시 요청으로 넘기는 스킬 모음. 중계 서버는 devicki/grokbot-relay.",
   "author": { "name": "devicki", "url": "https://github.com/devicki" },
   "homepage": "https://github.com/devicki/dev-toolkit/tree/main/plugins/grokbot-relay",
   "repository": "https://github.com/devicki/dev-toolkit",

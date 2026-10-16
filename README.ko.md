@@ -9,6 +9,7 @@ devicki의 Claude Code 플러그인 마켓플레이스입니다. 일상 개발 �
 | [erd](plugins/erd) | 0.4.2 | 스킬 | DBML(설계 원본)과 tbls(문서·Mermaid ERD·lint)로 프로젝트 ERD를 설계·문서화·유지보수합니다. 모노레포 지원 |
 | [skill-spy](plugins/skill-spy) | 0.1.1 | 모드 | 턴이 끝나면 그 턴에 쓰인 스킬을 토스트로 알려줍니다 |
 | [teamwire](plugins/teamwire) | 0.1.8 | 모드 | 팀 작업을 실시간 배선도로 보여주고, 팀장과 팀원 사이의 흐름을 전류처럼 표시합니다 |
+| [grokbot-relay](plugins/grokbot-relay) | 0.4.0 | 스킬 | Claude Code에서 로컬 MCP 중계로 내 Grok Bot 에이전트에게 묻고, 세션 작업을 Feedhand 게시 요청으로 넘깁니다 |
 
 ## 설치
 
@@ -19,6 +20,7 @@ Claude Code 안에서:
 /plugin install erd@dev-toolkit
 /plugin install skill-spy@dev-toolkit
 /plugin install teamwire@dev-toolkit
+/plugin install grokbot-relay@dev-toolkit
 ```
 
 셸에서:
@@ -28,6 +30,7 @@ claude plugin marketplace add devicki/dev-toolkit
 claude plugin install erd@dev-toolkit
 claude plugin install skill-spy@dev-toolkit
 claude plugin install teamwire@dev-toolkit
+claude plugin install grokbot-relay@dev-toolkit
 ```
 
 업데이트하려면 `/plugin marketplace update dev-toolkit`을 실행한 뒤, 열려 있는 세션에서 `/reload-plugins`를 실행하세요.
@@ -64,6 +67,19 @@ claude plugin install teamwire@dev-toolkit
 - 토큰을 쓰지 않습니다. 훅은 이벤트를 지켜보고 패널을 그리기만 합니다.
 
 자세한 내용: [plugins/teamwire/README.ko.md](plugins/teamwire/README.ko.md)
+
+## grokbot-relay: 내 Grok Bot 에이전트와 대화
+
+[devicki/grokbot-relay](https://github.com/devicki/grokbot-relay)의 grokbot MCP 중계(로컬 Cursor BDK 서버, 먼저 설치)를 쓰는 스킬 2개입니다.
+
+| 명령 | 용도 |
+|---|---|
+| `/grokbot-relay:grokbot-relay` | 허용된 봇에게 질문하고 답을 가져옴 |
+| `/grokbot-relay:feedhand-handoff` | 이 세션의 작업(git log, PR, 변경)을 Feedhand 게시 요청으로 만들어, 확인 후에만 보냄 |
+
+최종 게시글 작성과 승인은 Claude가 하지 않습니다. Feedhand가 초안을 쓰고, 승인은 Feedhand 채팅에서 합니다.
+
+자세한 내용: [plugins/grokbot-relay/README.ko.md](plugins/grokbot-relay/README.ko.md)
 
 ## erd: 스키마 설계부터 문서까지
 

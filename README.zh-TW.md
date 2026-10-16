@@ -9,6 +9,7 @@ devicki 的 Claude Code 外掛市集，收錄日常開發工作會用到的外�
 | [erd](plugins/erd) | 0.4.2 | 技能 | 用 DBML（結構描述的原始來源）和 tbls（文件、Mermaid ERD、lint）設計、記錄並維護專案的 ERD。支援 monorepo。 |
 | [skill-spy](plugins/skill-spy) | 0.1.1 | mod | 每一輪結束時，為該輪用到的每個技能顯示一則提示。 |
 | [teamwire](plugins/teamwire) | 0.1.8 | mod | 以即時配線圖呈現你的代理團隊，像電流一樣顯示領導與每位成員之間的往來。 |
+| [grokbot-relay](plugins/grokbot-relay) | 0.4.0 | 技能 | 在 Claude Code 中透過本機 MCP 中繼向你的 Grok Bot 代理提問，並把工作階段的成果交給 Feedhand 作為發文請求。 |
 
 ## 安裝
 
@@ -19,6 +20,7 @@ devicki 的 Claude Code 外掛市集，收錄日常開發工作會用到的外�
 /plugin install erd@dev-toolkit
 /plugin install skill-spy@dev-toolkit
 /plugin install teamwire@dev-toolkit
+/plugin install grokbot-relay@dev-toolkit
 ```
 
 在終端機中：
@@ -28,6 +30,7 @@ claude plugin marketplace add devicki/dev-toolkit
 claude plugin install erd@dev-toolkit
 claude plugin install skill-spy@dev-toolkit
 claude plugin install teamwire@dev-toolkit
+claude plugin install grokbot-relay@dev-toolkit
 ```
 
 要更新時，執行 `/plugin marketplace update dev-toolkit`，再於開著的工作階段中執行 `/reload-plugins`。
@@ -64,6 +67,19 @@ claude plugin install teamwire@dev-toolkit
 - 不消耗 token：hooks 只觀察事件並繪製面板。
 
 更多：[plugins/teamwire/README.zh-TW.md](plugins/teamwire/README.zh-TW.md)
+
+## grokbot-relay：和你的 Grok Bot 代理對話
+
+使用 [devicki/grokbot-relay](https://github.com/devicki/grokbot-relay) 的 grokbot MCP 中繼（本機 Cursor BDK 伺服器，請先設定）的兩個技能。
+
+| 指令 | 用途 |
+|---|---|
+| `/grokbot-relay:grokbot-relay` | 向允許的機器人提問並帶回回覆 |
+| `/grokbot-relay:feedhand-handoff` | 把這個工作階段的成果（git log、PR、變更）做成給 Feedhand 的發文請求，確認後才送出 |
+
+Claude 不撰寫也不核准最終貼文：由 Feedhand 起草，你在 Feedhand 聊天中核准。
+
+更多：[plugins/grokbot-relay/README.zh-TW.md](plugins/grokbot-relay/README.zh-TW.md)
 
 ## erd：從結構描述設計到文件
 

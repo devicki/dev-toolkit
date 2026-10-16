@@ -1,11 +1,16 @@
 ---
 name: feedhand-handoff
-description: Use when the user, while working in Claude Code, wants to post a feed update about their work (a release, fix, PR, or project milestone) to their social channels through Feedhand. Mines the session for material, proposes angles, and sends Feedhand a structured request via grokbot__ask. Not for writing the final post copy, not for posting directly, and not for approving posts (approval happens only in the Feedhand chat).
+description: >
+  Turn the work in this Claude Code session into a structured post request for Feedhand (a Grok Bot posting agent) and send it via grokbot__ask after the user confirms. Output: 2-3 post angles, then a request JSON.
+  Triggers: "작업 내용 피드에 올려줘", "이거 X에 올릴 글 요청해줘" / "post an update about this work", "send a feed post request to Feedhand".
+  Not for: general questions to bots (→ /grokbot-relay:grokbot-relay), writing final post copy, posting or approving (only in the Feedhand chat).
 ---
 
-# Feedhand handoff
+# /grokbot-relay:feedhand-handoff — post request from session work
 
-Feedhand (a Grok Bot agent) owns the user's voice, channel rules, drafting, and publishing. This skill only prepares a **request** with verified material and hands it over through the grokbot MCP relay. Follow the `grokbot-relay` skill rules too.
+> **One-line definition**: mines verified material, proposes angles, and hands Feedhand a request. Feedhand writes, previews, and publishes; the user approves in the Feedhand chat.
+
+Feedhand (a Grok Bot agent) owns the user's voice, channel rules, drafting, and publishing. This skill only prepares a **request** with verified material and hands it over through the grokbot MCP relay. Follow the `/grokbot-relay:grokbot-relay` hard rules too. Reply to the user in the user's language.
 
 ## 1. Mine material
 
