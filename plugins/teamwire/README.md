@@ -1,6 +1,6 @@
 # teamwire
 
-**English** · [한국어](README.ko.md)
+**English** · [한국어](README.ko.md) · [日本語](README.ja.md) · [繁體中文](README.zh-TW.md)
 
 A **mod** that draws your agent team as a live wiring diagram. When the lead session hands out work, a `Team` pane opens. It shows who is on the team, what each member was given, which model it runs, and where the current flows: out to a member while it works, back to the lead when an answer is waiting.
 

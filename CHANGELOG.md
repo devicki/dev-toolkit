@@ -3,6 +3,7 @@
 플러그인별 변경 이력은 각 플러그인 폴더의 `CHANGELOG.md` 를 본다.
 
 ## 2026-10
+- README 일본어(`README.ja.md`)·번체 중국어(`README.zh-TW.md`) 추가: 루트와 erd·skill-spy·teamwire. `validate.py` 가 `README.zh-TW.md` 같은 지역 코드 README 도 문서로 보고 버전 올림을 요구하지 않음
 - 저장소 검증 스크립트 `scripts/validate.py` + GitHub Actions
 - 새 플러그인 스캐폴드 `scripts/new-plugin.sh`, 템플릿 `templates/plugin/`
 - 스킬 작성 가이드 `docs/skill-authoring.md`

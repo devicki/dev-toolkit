@@ -1,5 +1,7 @@
 # erd — ERD 설계·문서화·유지보수 플러그인
 
+**한국어** · [日本語](README.ja.md) · [繁體中文](README.zh-TW.md)
+
 DBML 로 설계하고, tbls 로 모듈별 문서·ERD(Mermaid)·lint 를 만들어 Git 으로 관리합니다.
 Alembic·Prisma·Flyway 등 기존 마이그레이션 도구가 있는 프로젝트는 그 도구를 원본으로 두고 문서를 파생시킵니다.
 

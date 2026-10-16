@@ -1,6 +1,6 @@
 # dev-toolkit
 
-[English](README.md) · **한국어**
+[English](README.md) · **한국어** · [日本語](README.ja.md) · [繁體中文](README.zh-TW.md)
 
 devicki의 Claude Code 플러그인 마켓플레이스입니다. 일상 개발 작업에 쓰는 플러그인과 모드를 모아 두었습니다.
 

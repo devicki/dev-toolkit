@@ -39,5 +39,5 @@ PY
 find "$DST" -name '*.sh' -exec chmod +x {} +
 echo "+ plugins/$NAME (스킬: $SKILL)"
 echo "+ marketplace.json 등록"
-echo "다음: skills/$SKILL/SKILL.md 와 shared/references/rules.md 를 채우고, README 의 스킬 표·루트 README.md·README.ko.md 의 플러그인 표를 갱신하세요."
+echo "다음: skills/$SKILL/SKILL.md 와 shared/references/rules.md 를 채우고, README 의 스킬 표·루트 README(.md·.ko.md·.ja.md·.zh-TW.md) 의 플러그인 표를 갱신하세요."
 python3 "$ROOT/scripts/validate.py" || true
