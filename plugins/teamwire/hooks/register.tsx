@@ -621,7 +621,7 @@ export const register: Register = on => {
             pick: { id: m.id, ...(k < 9 ? { hotkey: String(k + 1) } : {}) },
           },
           { t: ' '.repeat(Math.max(1, NW - BTN - cells(oneLine(m.name, NW - 1 - BTN)))) },
-          stale ? { t: ` REPLY · ${dur(now - (m.stateAt ?? now))} `, c: HONEY, bg: COPPER, b: true } : { t: ` ${BADGE[m.state]} `, c: INK, bg: color, b: true },
+          stale ? { t: ` REPLY · ${dur(now - (m.stateAt ?? m.addedAt))} `, c: HONEY, bg: COPPER, b: true } : { t: ` ${BADGE[m.state]} `, c: INK, bg: color, b: true },
           ...(waiting?.id === m.id ? [{ t: ' ◆', c: GOLD }] : []),
         ])
       } else if ((r - 1) % 3 === 1) {
