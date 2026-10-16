@@ -260,12 +260,32 @@ test_detect_and_check_tools_run() {
   assert_has "$(bash "$SCRIPTS/check-tools.sh")" "MISSING="
 }
 
+test_install_tools_checksum() {
+  # A fake tbls release served from file://; Linux only (macOS installs through Homebrew).
+  local os arch v=9.9.9 rel="$WORK/rel/v9.9.9" home="$WORK/home-it" f
+  os=$(uname -s | tr '[:upper:]' '[:lower:]'); [ "$os" = linux ] || return 0
+  case "$(uname -m)" in x86_64|amd64) arch=amd64 ;; aarch64|arm64) arch=arm64 ;; *) return 0 ;; esac
+  f="tbls_v${v}_linux_${arch}.tar.gz"
+  mkdir -p "$rel" "$WORK/pkg" "$home"
+  printf '#!/bin/sh\necho fake tbls\n' > "$WORK/pkg/tbls"; chmod +x "$WORK/pkg/tbls"
+  tar czf "$rel/$f" -C "$WORK/pkg" tbls
+  echo "$(sha256sum "$rel/$f" | awk '{print $1}')  $f" > "$rel/checksums-linux.txt"
+  assert_eq "$(rc_of env HOME="$home" ERD_TBLS_BASE="file://$WORK/rel" bash "$SCRIPTS/install-tools.sh" tbls $v)" 0 "$(out)"
+  assert_eq "$("$home/.local/bin/tbls")" "fake tbls"
+  # A tampered archive is refused and nothing is installed.
+  rm "$home/.local/bin/tbls"; echo junk >> "$rel/$f"
+  assert_eq "$(rc_of env HOME="$home" ERD_TBLS_BASE="file://$WORK/rel" bash "$SCRIPTS/install-tools.sh" tbls $v)" 1 "$(out)"
+  assert_has "$(out)" "Checksum mismatch"
+  [ ! -e "$home/.local/bin/tbls" ]
+}
+
 echo "erd plugin tests — temporary DB: ${DB_MODE:-none}, tbls/dbml2sql: $([ $TOOLS_OK = 1 ] && echo yes || echo no)"
 t "inject-block idempotent"           test_inject_block_idempotent
 t "install-templates single repo idempotent" test_install_templates_single_idempotent
 t "install-templates quoting, AGENTS.md" test_install_templates_quoting_and_agents_md
 t "languages en/ko, legacy erd.env"   test_language_en_ko_legacy
 t "detect/check-tools run"            test_detect_and_check_tools_run
+t "install-tools verifies tbls checksum" test_install_tools_checksum
 t "changed-units categories, base ref" test_changed_units
 t "single repo doc/check/drift"       test_single_doc_check_drift   db
 t "exit codes 2/3/4/6/7/8"            test_exit_codes               db
