@@ -180,7 +180,8 @@ export function fromAgent(status: string): MemberState {
   return 'failed'
 }
 
-export const isStale = (m: Member, now: number) => m.state === 'reply' && m.stateAt !== undefined && now - m.stateAt >= STALE_MS
+// A member with no state clock (wired by an older version) counts from when it joined, or its answer would pull current forever.
+export const isStale = (m: Member, now: number) => m.state === 'reply' && now - (m.stateAt ?? m.addedAt) >= STALE_MS
 
 /** Which way current runs on a member's wire now, and whether it is a surge. */
 export function flowOf(m: Member, now: number): { dir?: Dir; hot: boolean } {

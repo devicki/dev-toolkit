@@ -100,6 +100,9 @@ test('an unread answer goes stale and stops pulling current; busy counts work he
   expect(isStale(reply, STALE_MS)).toBe(true)
   expect(flowOf(reply, STALE_MS)).toEqual({ hot: false })
   expect(busyCount([member({ state: 'working' }), member({ state: 'blocked' }), reply])).toBe(2)
+  // No state clock (an older version wired it): counted from when it joined.
+  expect(isStale(member({ state: 'reply', addedAt: 0 }), STALE_MS)).toBe(true)
+  expect(flowOf(member({ state: 'reply', addedAt: 0 }), STALE_MS)).toEqual({ hot: false })
   expect([cells('grok·p2'), cells('리뷰어'), cells('a🧩')]).toEqual([7, 6, 3])
 })
 
