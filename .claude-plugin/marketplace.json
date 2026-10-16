@@ -20,6 +20,11 @@
       "name": "teamwire",
       "source": "./plugins/teamwire",
       "description": "팀장 세션이 팀원에게 일을 맡기면 패널이 열려, 팀원 구성·역할·모델과 지시/답의 흐름을 전선의 전류처럼 보여주는 모드. herdr 사용 시 codex·grok 같은 외부 CLI도 팀원으로 표시."
+    },
+    {
+      "name": "grokbot-relay",
+      "source": "./plugins/grokbot-relay",
+      "description": "Claude Code·Cursor에서 로컬 BDK 중계로 내 Grok Bot 에이전트에게 질문하고 답을 받아오는 플러그인. Feedhand 게시는 요청만, 승인은 Feedhand 채팅에서."
     }
   ]
 }
