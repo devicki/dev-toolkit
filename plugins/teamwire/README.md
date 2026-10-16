@@ -11,6 +11,7 @@ A **mod** that draws your agent team as a live wiring diagram. When the lead ses
 - **Dashboard**: the lead's state as a chip, tiles for TEAM / WORKING / REPLY / NEEDS YOU / DONE / UPTIME, a busy bar, and the lead's **context window** (`38% · 376k / 1M tokens`) with the session cost; green, amber past 60%, red past 85%.
 - **ORCHESTRATION**: the lead at the centre of a rounded fan, one branch per member: name, state badge, `kind · agent · model · effort`, its time, tool calls and output tokens, and the task it was handed. The lead's box carries its model, a context gauge and its effort.
 - **Current on the wires**: sparks run lead → member while it works, member → lead while its answer waits to be read, and surge for a few seconds after a message or handoff. An answer left unread for 5 minutes goes **stale** (`REPLY · 7m`) and stops pulling current.
+- **Busy names**: a light sweeps over the name of each working member, and over `◆ LEAD` while the lead works.
 - **Member to member**: when two members message each other, a rail on the right joins their rows for a few seconds, the arrow on the receiver.
 - **FOCUS**: press a member's name (or its number, `1`–`9`) to open its full task, model, clock, spend and its last messages; press again to close.
 - **ACTIVITY**: joins, work started, `finished in 34s · reply ready`, `done`, `failed`, `needs you`, `answer read by lead`, and `team stood down · 4 members · 3m 20s` when the last busy member finishes.
@@ -50,9 +51,10 @@ The pane opens by itself on the first handoff. Close it and it stays closed for 
 
 ## Good to know
 
-- **No tokens.** Hooks run inside Claude Code; nothing is added to the prompt or the conversation. The cost is local: one `herdr agent list` every 2 s while herdr members exist, and redraws (~7 per second) while current flows.
+- **No tokens.** Hooks run inside Claude Code; nothing is added to the prompt or the conversation. The cost is local: one `herdr agent list` every 2 s while herdr members exist, and redraws (~7 per second) while current flows or anyone works.
 - Press keys (`c`, `l`, `1`–`9`) reach the pane once it holds the focus: click it, or ctrl+x tab.
 - The pane opens unasked only on a terminal 144 columns or wider (110 once you have opened it).
+- A short pane keeps the dashboard and the diagram and drops COMMS, then ACTIVITY, then FOCUS; a line beside the keys names what it left out (`+ ACTIVITY 6 · COMMS 3 hidden`). A taller pane shows them. Long text is cut with `…` at the pane's edge; FOCUS shows a member's full task.
 - A mod runs inside Claude Code with your user permissions. It has no sandbox. teamwire runs the `herdr` command and nothing else, and writes no files; it reads other sessions' status files only.
 - Under an organization-managed Claude Code, plugins you install yourself may not receive these events.
 - Known limits: herdr calls built from variables or scripts are not detected; the CLI model is read from footers as they look today; another session's state comes from Claude Code's internal status file, so a change to that file would leave such members at their last state; messages between two members flash both wires instead of drawing a wire of their own.

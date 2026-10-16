@@ -16,6 +16,7 @@ import {
   fromAgent,
   fromHerdr,
   fromSession,
+  fitRow,
   herdrCalls,
   isStale,
   KIND_LABEL,
@@ -24,6 +25,8 @@ import {
   oneLine,
   padCells,
   runs,
+  shineAt,
+  shineRuns,
   sessionFor,
   type SessionFile,
   shortModel,
@@ -267,7 +270,9 @@ const pollSessions = async ($: EngineInterface) => {
 const animate = async ($: EngineInterface) => {
   if (dismissed) return
   const now = await $.clock.now()
-  const flowing = (await read($, membersAtom)).some(m => flowOf(m, now).dir)
+  const members = await read($, membersAtom)
+  // Current on a wire, or a busy name with light passing over it.
+  const flowing = members.some(m => flowOf(m, now).dir || m.state === 'working') || (members.length > 0 && (await read($, leadAtom)).busy)
   if (flowing || wasFlowing) await update($, tickAtom, n => n + 1)
   wasFlowing = flowing
 }
@@ -491,13 +496,22 @@ export const register: Register = on => {
     const live = members.filter(m => flowOf(m, now).dir).length
 
     // A Seg with `pick` is a member's name: pressing it opens FOCUS on that member.
-    type Seg = { t: string; c?: string; bg?: string; b?: boolean; d?: boolean; u?: boolean; pick?: { id: string; hotkey?: string } }
+    // `shine`: a busy name, a light passing over it (the spark's position, -1 resting).
+    type Seg = { t: string; c?: string; bg?: string; b?: boolean; d?: boolean; u?: boolean; shine?: number; pick?: { id: string; hotkey?: string } }
     const span = (s: Seg, i: number) => (
       <Text key={`s${i}`} color={s.c} backgroundColor={s.bg} bold={s.b} dimColor={s.d} underline={s.u}>
-        {s.t}
+        {s.shine === undefined
+          ? s.t
+          : shineRuns(s.t, s.shine).map((r, j) => (
+              <Text key={`r${j}`} color={r.v === 2 ? SPARK : r.v === 1 ? LINEN : s.c}>
+                {r.t}
+              </Text>
+            ))}
       </Text>
     )
-    const line = (key: string, segs: Seg[]) => {
+    // No row may run past the pane: a terminal would wrap the rest onto the next row.
+    const line = (key: string, row: Seg[]) => {
+      const segs = fitRow(row, W, BTN)
       const pick = segs.find(s => s.pick)
       if (!pick) return <Text key={key}>{segs.map(span)}</Text>
       return (
@@ -555,7 +569,7 @@ export const register: Register = on => {
     const effort = (lead.effort ?? '').slice(0, 6)
     const leadCol = (r: number): Seg[] => {
       if (r === fan.lead - 1) return [{ t: '╭──────────╮', c: boxC }]
-      if (r === fan.lead) return [{ t: '│', c: boxC }, { t: ' ◆ LEAD   ', c: GOLD, b: true }, { t: '├', c: boxC }]
+      if (r === fan.lead) return [{ t: '│', c: boxC }, { t: ' ◆ LEAD   ', c: GOLD, b: true, ...(lead.busy ? { shine: shineAt(7, tick) } : {}) }, { t: '├', c: boxC }]
       if (r === fan.lead + 1) return [{ t: '│', c: boxC }, { t: ` ${(lead.model.length > 9 ? lead.model.replace(' ', '') : lead.model).slice(0, 9).padEnd(9)}`, d: true }, { t: '│', c: boxC }]
       if (r === fan.lead + 2) {
         const g = gauge(ctxPct, 5)
@@ -602,7 +616,8 @@ export const register: Register = on => {
             t: oneLine(m.name, NW - 1 - BTN),
             b: true,
             u: selected?.id === m.id,
-            c: selected?.id === m.id ? GOLD : undefined,
+            c: selected?.id === m.id ? GOLD : m.state === 'working' ? BUTTER : undefined,
+            ...(m.state === 'working' ? { shine: shineAt(cells(oneLine(m.name, NW - 1 - BTN)), tick, k * 5) } : {}),
             pick: { id: m.id, ...(k < 9 ? { hotkey: String(k + 1) } : {}) },
           },
           { t: ' '.repeat(Math.max(1, NW - BTN - cells(oneLine(m.name, NW - 1 - BTN)))) },
@@ -676,6 +691,12 @@ export const register: Register = on => {
     const actN = Math.max(0, Math.min(6, beats.length, left - 2))
     left -= actN ? actN + 2 : 0
     const commsN = Math.max(0, Math.min(3, msgs.length, left - 2))
+    // Sections with something to show but no room: say so, or they look empty.
+    const hidden = [
+      ...(selected && focusN < focus.length ? ['FOCUS'] : []),
+      ...(beats.length && !actN ? [`ACTIVITY ${beats.length}`] : []),
+      ...(msgs.length && !commsN ? [`COMMS ${msgs.length}`] : []),
+    ]
 
     const clear = () => void update($, membersAtom, list => list.filter(m => m.state === 'working' || m.state === 'blocked' || m.state === 'reply'))
     const clearLog = () => {
@@ -793,6 +814,7 @@ export const register: Register = on => {
         <Box gap={2} marginTop={1}>
           {key('clear', 'c', 'clear finished', clear)}
           {key('log', 'l', 'clear log', clearLog)}
+          {hidden.length > 0 && <Text dimColor>{`+ ${hidden.join(' · ')} hidden · a taller pane shows them`}</Text>}
         </Box>
       </Box>
     )
