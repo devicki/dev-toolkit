@@ -1,7 +1,10 @@
 # Changelog
 
+## 0.2.1
+- Relay server, deploy scripts, and .mcp.json example moved to devicki/grokbot-relay. This plugin keeps only the usage skill.
+
 ## 0.2.0
-- Server deployment: systemd unit (loopback, hardened), idempotent `deploy/install.sh`, `deploy/connect-claude.sh` for regular users, `relay/package-lock.json` for `npm ci`.
+- Server deployment (now in devicki/grokbot-relay).
 
 ## 0.1.0
-- First version: BDK relay scaffold (allowlist, interrupt disabled), usage skill, .mcp.json example, ko/en README.
+- First version: relay scaffold, usage skill, README.

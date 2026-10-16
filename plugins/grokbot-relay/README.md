@@ -1,107 +1,18 @@
-# grokbot-relay
+# grokbot-relay (Claude Code plugin)
 
-Ask your own Grok Bot agents (helper, botkit, 집순이, Feedhand, Watchless) from Claude Code, Cursor, or a terminal through a **local** Cursor BDK relay (`cursor-grokbot-agents` extension). [한국어](README.ko.md)
+Usage skill for asking your own Grok Bot agents (helper, botkit, 집순이, Feedhand, Watchless) from Claude Code through the grokbot MCP relay.
 
-> Status 0.1.0: scaffold checked against `@cursor/bdk` 0.2.25 docs. Items marked **VERIFY LOCALLY** are not tested yet.
+This plugin contains only the skill. The relay server, systemd deployment, and the Claude Code connect script live in **[devicki/grokbot-relay](https://github.com/devicki/grokbot-relay)**.
 
-## How it works
+## Setup
 
-```
-Claude Code / Cursor ──stdio──> bdk mcp ──HTTP (127.0.0.1)──> bdk serve (relay/) ──> your Grok Bot agents
-```
-
-- Allowlist: `relay/bot/extensions/grokbot/extension.ts`. `grokbot__interrupt` is removed by `tools/interrupt.ts`.
-- Auth uses your own Cursor login on this machine. Nothing is stored in this repo.
-
-## Install (local)
-
-Requires Node.js 22+.
-
-```bash
-cd plugins/grokbot-relay/relay
-npm install
-npx bdk login                     # your Cursor account, in the browser
-npx bdk validate
-npx bdk dev                       # optional: try "who can you talk to?" in the playground
-
-export GROKBOT_RELAY_TOKEN="$(openssl rand -hex 32)"   # keep it out of git
-npx bdk serve --dir . --bearer-token "$GROKBOT_RELAY_TOKEN"
-```
-
-**VERIFY LOCALLY**
-- the port and base URL `bdk serve` prints, and whether the MCP path is `/v1/mcp` or `/<slug>/v1/mcp`;
-- that `serve` accepts `--bearer-token` (the CLI help lists it for serve) and listens on 127.0.0.1 only.
-
-### Cursor
-
-```bash
-npx bdk mcp install --url http://127.0.0.1:<PORT> --bearer-token "$GROKBOT_RELAY_TOKEN" --name grokbot --print   # preview
-npx bdk mcp install --url http://127.0.0.1:<PORT> --bearer-token "$GROKBOT_RELAY_TOKEN" --name grokbot
-```
-
-This writes the token into `~/.cursor/mcp.json`. Treat that file as a credential.
-
-### Claude Code
-
-```bash
-export GROKBOT_RELAY_PORT=<PORT>
-claude mcp add grokbot -- npx -y @cursor/bdk mcp --url "http://127.0.0.1:$GROKBOT_RELAY_PORT" --bearer-token "$GROKBOT_RELAY_TOKEN"
-```
-
-Or copy `.mcp.json.example` to your project's `.mcp.json`; it reads `GROKBOT_RELAY_PORT` and `GROKBOT_RELAY_TOKEN` from the environment. Then install this plugin for the `grokbot-relay` skill:
+1. Set up the relay: see [devicki/grokbot-relay](https://github.com/devicki/grokbot-relay) (한국어: [README.ko.md](https://github.com/devicki/grokbot-relay/blob/main/README.ko.md)).
+2. Register the MCP server with [`deploy/connect-claude.sh`](https://github.com/devicki/grokbot-relay/blob/main/deploy/connect-claude.sh).
+3. Install this plugin:
 
 ```bash
 claude plugin marketplace add devicki/dev-toolkit
 claude plugin install grokbot-relay@dev-toolkit
 ```
 
-## Server deployment (Linux, systemd)
-
-One server, one service account `grokbot`, several users. An admin (root) installs; regular users in the `grokbot` group connect.
-
-| Path | What |
-| --- | --- |
-| `/opt/grokbot-relay/relay` | relay app (owner `grokbot`) |
-| `/var/lib/grokbot` | `grokbot` home: Cursor login + serve state |
-| `/etc/grokbot-relay/env` | `GROKBOT_RELAY_PORT`, `GROKBOT_RELAY_TOKEN` (640 root:grokbot) |
-
-Admin (root):
-
-```bash
-git clone https://github.com/devicki/dev-toolkit && cd dev-toolkit/plugins/grokbot-relay
-sudo ./deploy/install.sh            # optional: --port 3000
-sudo -u grokbot -H bash -c 'cd /opt/grokbot-relay/relay && npx bdk login'
-sudo systemctl start grokbot-relay
-sudo systemctl status grokbot-relay --no-pager
-sudo usermod -aG grokbot <user1>
-sudo usermod -aG grokbot <user2>
-```
-
-Each regular user (log out and back in after `usermod`):
-
-```bash
-git clone https://github.com/devicki/dev-toolkit && cd dev-toolkit/plugins/grokbot-relay
-./deploy/connect-claude.sh          # registers MCP server "grokbot" (user scope)
-claude mcp list
-claude plugin marketplace add devicki/dev-toolkit
-claude plugin install grokbot-relay@dev-toolkit
-```
-
-Notes:
-- `connect-claude.sh` stores a `bash -c` command that reads `/etc/grokbot-relay/env` at start, so the token is **not** written into Claude Code's config (`~/.claude.json`). If you use `claude mcp add` with the token inline instead, it is stored there in plain text.
-- The token is still passed as a process argument (`--bearer-token`), so other local users may see it in `ps`. On a shared server, mount `/proc` with `hidepid=2` or accept that group members and admins can see it.
-- Everyone in the `grokbot` group shares one token, so they share one BDK caller identity (contact list and read positions) and the same Grok Bot account.
-- Rotate the token: edit the env file, `sudo systemctl restart grokbot-relay`, users re-run nothing (it is read at each start).
-
-**VERIFY ON THE SERVER**
-- `bdk serve` flags in the unit: `--host 127.0.0.1 --port`, `--mode single` (MCP at `/v1/mcp`), `--bearer-token` (from the 0.2.25 CLI reference, not run yet).
-- Whether the `bdk login` credential (stored in the CLI config dir under `/var/lib/grokbot`) survives reboot and works under the hardened unit.
-- That `bdk login` works on a headless server (it prints a sign-in link to open in any browser).
-
-## Safety
-
-- Keep `serve` on loopback. Put an authenticating proxy in front before exposing it anywhere.
-- `check` reads the bot conversation. Anyone who can reach the relay can read replies.
-- All callers share one Grok Bot account and bot memory.
-- **Feedhand is request-only.** Posts go live only after you approve in the Feedhand chat. The relay never approves.
-- `bdk mcp` does not work with `--prod` hosted deployments. Run it locally.
+Key rule: Feedhand is request-only. Posts go live only after you approve in the Feedhand chat; the relay never approves.
