@@ -1,6 +1,6 @@
 # skill-spy
 
-[English](README.md) · **한국어**
+[English](README.md) · **한국어** · [日本語](README.ja.md) · [繁體中文](README.zh-TW.md)
 
 작업(턴)이 끝나면 그 턴에 쓰인 스킬을 토스트로 알려주는 **모드(mod)** 입니다. `/erd:design` 처럼 직접 입력한 스킬과, 요청을 보고 Claude가 알아서 쓴 스킬을 모두 잡습니다.
 

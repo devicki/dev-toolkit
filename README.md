@@ -1,6 +1,6 @@
 # dev-toolkit
 
-**English** · [한국어](README.ko.md)
+**English** · [한국어](README.ko.md) · [日本語](README.ja.md) · [繁體中文](README.zh-TW.md)
 
 A Claude Code plugin marketplace by devicki: plugins and mods for day-to-day development work.
 

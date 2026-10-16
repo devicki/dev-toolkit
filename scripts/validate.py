@@ -149,8 +149,8 @@ def validate_plugin(entry: dict, base: str | None) -> None:
     if base and manifest:
         changed = git("diff", "--name-only", f"{base}...HEAD", "--", str(pdir.relative_to(ROOT))).split()
         changed += git("diff", "--name-only", "HEAD", "--", str(pdir.relative_to(ROOT))).split()
-        # Docs in any language (README.md, README.ko.md) and tests ship no behaviour.
-        changed = [c for c in changed if not re.search(r"/(README(\.[a-z]{2})?\.md|CHANGELOG\.md)$", c) and "/tests/" not in c]
+        # Docs in any language (README.md, README.ko.md, README.zh-TW.md) and tests ship no behaviour.
+        changed = [c for c in changed if not re.search(r"/(README(\.[a-z]{2}(-[A-Z]{2})?)?\.md|CHANGELOG\.md)$", c) and "/tests/" not in c]
         if changed:
             old = git("show", f"{base}:{pdir.relative_to(ROOT)}/.claude-plugin/plugin.json")
             try:

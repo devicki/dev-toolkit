@@ -1,6 +1,6 @@
 # skill-spy
 
-**English** · [한국어](README.ko.md)
+**English** · [한국어](README.ko.md) · [日本語](README.ja.md) · [繁體中文](README.zh-TW.md)
 
 A **mod** that shows a toast for each skill used in a turn, once the turn ends. It catches skills you type, like `/erd:design`, and skills Claude picks on its own from your request.
 
