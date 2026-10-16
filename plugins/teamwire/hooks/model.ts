@@ -83,10 +83,23 @@ export function herdrCalls(cmd: string): HerdrCall[] {
 }
 
 /** One line of a prompt, for a role. */
-export const oneLine = (s: string, max = 80) => {
-  const t = s.replace(/\s+/g, ' ').trim()
-  return t.length > max ? `${t.slice(0, max - 1)}…` : t
+export const oneLine = (s: string, max = 80) => clip(s.replace(/\s+/g, ' ').trim(), max)
+
+/** The head of `s` that fits `max` terminal cells, ending in … when cut; Hangul and CJK take two cells. */
+export const clip = (s: string, max: number) => {
+  if (cells(s) <= max) return s
+  let out = ''
+  let n = 0
+  for (const ch of s) {
+    if (n + cells(ch) > max - 1) break
+    out += ch
+    n += cells(ch)
+  }
+  return `${out}…`
 }
+
+/** `s` padded with spaces to `w` cells. */
+export const padCells = (s: string, w: number) => s + ' '.repeat(Math.max(0, w - cells(s)))
 
 /**
  * The model a CLI agent shows in its own footer or status line.

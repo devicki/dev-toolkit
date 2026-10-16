@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import type { Member } from '../types'
-import { busyCount, cells, chronicle, dur, fanout, gauge, isStale, kTokens, STALE_MS, flowOf, fromHerdr, herdrCalls, modelOnScreen, runs, shortModel, wireCells } from '../hooks/model'
+import { busyCount, cells, oneLine, padCells, chronicle, dur, fanout, gauge, isStale, kTokens, STALE_MS, flowOf, fromHerdr, herdrCalls, modelOnScreen, runs, shortModel, wireCells } from '../hooks/model'
 
 test('herdrCalls finds who the lead talks to, through quotes, options and chains', async () => {
   expect(herdrCalls(`herdr agent prompt wN:p2 "Review the diff; report \\"only\\" bugs" --wait --timeout 120000`)).toEqual([
@@ -101,4 +101,13 @@ test('an unread answer goes stale and stops pulling current; busy counts work he
   expect(flowOf(reply, STALE_MS)).toEqual({ hot: false })
   expect(busyCount([member({ state: 'working' }), member({ state: 'blocked' }), reply])).toBe(2)
   expect([cells('grok·p2'), cells('리뷰어'), cells('a🧩')]).toEqual([7, 6, 3])
+})
+
+test('text is cut by terminal cells, so Hangul never spills past the pane', async () => {
+  const task = '[상태 조사, owner 요청] Please reply briefly: what changed'
+  const cut = oneLine(task, 30)
+  expect(cells(cut)).toBeLessThanOrEqual(30)
+  expect(cut).toBe('[상태 조사, owner 요청] Pleas…')
+  expect(oneLine('리뷰어', 6)).toBe('리뷰어')
+  expect(cells(padCells('리뷰어', 8))).toBe(8)
 })

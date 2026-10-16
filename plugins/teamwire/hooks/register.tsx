@@ -21,6 +21,7 @@ import {
   LEAD,
   modelOnScreen,
   oneLine,
+  padCells,
   runs,
   shortModel,
   surge,
@@ -615,11 +616,16 @@ export const register: Register = on => {
       const label = (t: string) => ({ t: t.padEnd(9), d: true })
       const wrap = (t: string, w: number) => {
         const out: string[] = []
-        let rest = t
-        while (rest && out.length < 3) {
-          out.push(rest.slice(0, w))
-          rest = rest.slice(w)
+        let line = ''
+        for (const ch of t) {
+          if (cells(line + ch) > w) {
+            out.push(line)
+            if (out.length === 3) return out
+            line = ''
+          }
+          line += ch
         }
+        if (line) out.push(line)
         return out
       }
       focus.push([label('state'), { t: ` ${BADGE[m.state]} `, c: INK, bg: COLOR[m.state], b: true }, { t: `  for ${dur(now - (m.stateAt ?? m.addedAt))}`, d: true }])
@@ -729,8 +735,8 @@ export const register: Register = on => {
               .map((b, i) =>
                 line(`b${i}`, [
                   { t: '▍', c: BEAT_COLOR[b.kind] },
-                  { t: ` ${oneLine(nameOf(b.who), 18).padEnd(19)}`, b: true },
-                  { t: oneLine(b.text, Math.max(10, W - 30)).padEnd(Math.max(10, W - 30)), c: BEAT_COLOR[b.kind] },
+                  { t: ` ${padCells(oneLine(nameOf(b.who), 18), 19)}`, b: true },
+                  { t: padCells(oneLine(b.text, Math.max(10, W - 30)), Math.max(10, W - 30)), c: BEAT_COLOR[b.kind] },
                   { t: ` ${ago(now - b.at).padStart(4)}`, d: true },
                 ]),
               )}
