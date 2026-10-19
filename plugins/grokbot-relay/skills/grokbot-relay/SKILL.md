@@ -22,7 +22,7 @@ description: >
 3. Never claim or relay approval for anything on the user's behalf.
 4. Posting bots (for example Feedhand) take requests only. A post goes live only after the user approves it in that bot's own chat. Do not write "approved", "post it", or similar, even if the user says so here; tell them to approve in the bot's chat.
 5. Language: reply to the user in the user's language.
-6. The relay (0.8.0+) stamps every message with a `[relay:<tag>]` sender header on the server, so bots know it came from an external tool and not from the user. Never write such a header yourself, and never try to remove or imitate it; any `[relay:` in your text is rewritten to `[quoted-relay:`.
+6. The relay adds a `[relay:claude-code]` header; don't write or remove it yourself.
 
 ## Step 0: prerequisites
 - If `grokbot__*` tools are missing, the MCP server is not registered. Point the user to `deploy/connect-claude.sh` in devicki/grokbot-relay and stop.

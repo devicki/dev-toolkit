@@ -27,4 +27,4 @@ claude plugin install grokbot-relay@dev-toolkit
 - Claude 不撰寫最終貼文。語氣與頻道規則由 Feedhand 負責。
 - Feedhand 只接受請求。貼文只有在你於 Feedhand 聊天中核准後才會發布；中繼永遠不會核准。
 - 不捏造事實或數字，請求中不放任何機密。
-- 中繼（devicki/grokbot-relay 0.8.0 以上）會在每則訊息加上 `[relay:<tag>]` 發送者標頭，讓機器人能分辨你本人與中繼請求；經中繼送來的文字永遠無法核准貼文。
+- 中繼會在每則訊息加上 `[relay:claude-code]` 標頭；請勿自行撰寫或移除。

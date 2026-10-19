@@ -27,4 +27,4 @@ claude plugin install grokbot-relay@dev-toolkit
 - Claude never writes the final post. Feedhand owns voice and channel rules.
 - Feedhand takes requests only. Posts go live only after you approve in the Feedhand chat; the relay never approves.
 - No invented facts or numbers, and no secrets in requests.
-- The relay (devicki/grokbot-relay 0.8.0+) stamps every message with a `[relay:<tag>]` sender header, so bots can tell relayed requests from you; relayed text can never approve a post.
+- The relay adds a `[relay:claude-code]` header to every message; don't write or remove it yourself.

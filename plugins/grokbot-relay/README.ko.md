@@ -27,4 +27,4 @@ claude plugin install grokbot-relay@dev-toolkit
 - 최종 게시글은 Claude가 쓰지 않습니다. 말투와 채널 규칙은 Feedhand가 맡습니다.
 - Feedhand는 요청만 받습니다. 게시는 Feedhand 채팅에서 직접 승인해야 나갑니다. 중계로는 승인하지 않습니다.
 - 사실이나 숫자를 지어내지 않고, 요청에 비밀값을 넣지 않습니다.
-- 중계(devicki/grokbot-relay 0.8.0 이상)는 모든 메시지에 `[relay:<tag>]` 발신자 헤더를 붙입니다. 그래서 봇이 내가 직접 쓴 메시지와 중계 요청을 구별하고, 중계로 온 글은 게시를 승인할 수 없습니다.
+- 중계는 모든 메시지에 `[relay:claude-code]` 헤더를 붙입니다. 직접 쓰거나 지우지 마세요.

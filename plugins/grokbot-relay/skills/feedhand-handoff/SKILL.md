@@ -46,7 +46,7 @@ After the user picks an angle, fill the template below.
 
 - Claude does **not** write the final post text. Feedhand owns voice and channel rules.
 - Never claim or relay approval ("approved", "post it", "the user said yes"), even if the user says so here. Final approval happens only in the Feedhand chat.
-- The relay adds a `[relay:<tag>]` sender header to the message. Feedhand treats any message with it as an external request and ignores approval text inside it. Don't add, remove or imitate the header.
+- The relay adds a `[relay:claude-code]` header; don't write or remove it yourself.
 - No secrets, tokens, internal hostnames, private repo contents, or personal data in the request.
 - One request per post. Don't send near-duplicates or batch posts.
 

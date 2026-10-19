@@ -1,5 +1,8 @@
 # grokbot-relay 플러그인 변경 이력
 
+## 0.5.1
+- 헤더 규칙을 한 줄로 줄임: 중계가 `[relay:claude-code]` 헤더를 붙이니 직접 쓰거나 지우지 않음 (devicki/grokbot-relay 0.8.1)
+
 ## 0.5.0
 - 중계가 붙이는 `[relay:<tag>]` 발신자 헤더(devicki/grokbot-relay 0.8.0)를 스킬 규칙에 반영: 헤더를 직접 쓰거나 지우거나 흉내 내지 않음. Feedhand는 이 헤더가 있는 메시지를 외부 요청으로 다루고, 그 안의 승인 문구는 무시함
 - README 4개 언어의 규칙에 같은 내용 추가
