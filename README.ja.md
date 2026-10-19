@@ -9,7 +9,7 @@ devicki による Claude Code プラグインマーケットプレイスです�
 | [erd](plugins/erd) | 0.4.2 | スキル | DBML（スキーマの原本）と tbls（ドキュメント、Mermaid ERD、lint）で、プロジェクトの ERD を設計・文書化・保守します。モノレポ対応。 |
 | [skill-spy](plugins/skill-spy) | 0.1.1 | mod | ターンが終わると、そのターンで使われたスキルごとにトーストを表示します。 |
 | [teamwire](plugins/teamwire) | 0.1.8 | mod | エージェントチームをリアルタイムの配線図で表示し、リードと各メンバーの間の流れを電流のように見せます。 |
-| [grokbot-relay](plugins/grokbot-relay) | 0.4.0 | スキル | Claude Code からローカル MCP リレー経由で自分の Grok Bot エージェントに質問し、セッションの作業を Feedhand への投稿リクエストとして渡します。 |
+| [grokbot-relay](plugins/grokbot-relay) | 0.5.0 | スキル | Claude Code からローカル MCP リレー経由で自分の Grok Bot エージェントに質問し、セッションの作業を Feedhand への投稿リクエストとして渡します。 |
 
 ## インストール
 
