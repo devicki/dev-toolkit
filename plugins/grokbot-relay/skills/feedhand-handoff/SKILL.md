@@ -31,7 +31,11 @@ After the user picks an angle, fill the template below.
 - `requester`: always `claude-code`.
 - `channels`: ask if unsure. Default `["x"]`. Allowed: x, threads, instagram, naver, reddit.
 - `facts`: short, checkable statements, each with a `source`. Public links (repo, PR, release, commit) go in `links`. Copy names, versions, and numbers exactly. No invented facts, numbers, quotes, dates, or results. If something is unknown, leave it out or ask.
-- `media`: paths only if the file exists **on the relay server** (check it). Otherwise put the file in `media_to_attach` with a note, so the user attaches it in the Feedhand chat.
+- `media`: server files only, each as `{"host": "<ssh-alias>", "path": "/abs/path", "note": "what it shows"}`. Feedhand copies them over SSH itself.
+  - `host` is the SSH alias Feedhand knows for the account the file lives under (one alias per server account; ask the user if unsure). The file must be readable by that account.
+  - `path` is absolute, no `..`, no quotes.
+  - Before sending, check the file exists and report its size (`ls -l` or `stat -c %s`) to the user. Feedhand refuses files above the channel limit (for X video 8 GB, or 16 GB with Premium).
+- `media_to_attach`: files that are not on the server (for example on the user's laptop), with a note, so the user attaches them in the Feedhand chat.
 - `hints`: emphasis and tone suggestions only (what to highlight, what to avoid). Do not write post copy.
 - `post_language`: per channel, only if the user asked for a specific language. Otherwise omit and let Feedhand use its prefs.
 
@@ -67,7 +71,7 @@ This is a request only. Draft it in your usual voice and show the preview in the
     {"text": "Claude Code usage skill ships in devicki/dev-toolkit", "source": "https://github.com/devicki/dev-toolkit/tree/main/plugins/grokbot-relay"}
   ],
   "links": ["https://github.com/devicki/grokbot-relay"],
-  "media": [],
+  "media": [{"host": "<ssh-alias>", "path": "/home/<user>/demo/relay-demo.mp4", "note": "30 s screen recording of grokbot__ask"}],
   "media_to_attach": [{"note": "terminal screenshot of claude mcp list, user will attach in Feedhand chat"}],
   "hints": ["casual, not stiff", "highlight that posting still needs my approval in Feedhand", "no emoji"],
   "post_language": {"x": "ko"}

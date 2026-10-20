@@ -9,7 +9,7 @@ This plugin contains only skills. The relay server, systemd deployment, agent al
 | Skill | Use |
 |---|---|
 | `/grokbot-relay:grokbot-relay` | Ask an allowed bot one self-contained question and bring back the reply (`grokbot__ask`, `check`, `list`) |
-| `/grokbot-relay:feedhand-handoff` | Mine git log, PRs, changes and README/CHANGELOG, propose 2-3 post angles, and send Feedhand a structured request after you confirm |
+| `/grokbot-relay:feedhand-handoff` | Mine git log, PRs, changes and README/CHANGELOG, propose 2-3 post angles, and send Feedhand a structured request after you confirm. Server files in `media` (`{host, path, note}`) are fetched by Feedhand over SSH |
 
 ## Setup
 

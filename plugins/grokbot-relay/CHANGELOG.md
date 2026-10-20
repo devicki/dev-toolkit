@@ -1,5 +1,8 @@
 # grokbot-relay 플러그인 변경 이력
 
+## 0.5.2
+- feedhand-handoff: `media`에 서버 파일을 `{host, path, note}`로 적으면 Feedhand가 SSH로 직접 가져옴(devicki/feedhand `media fetch`). 보내기 전에 파일 존재와 크기를 확인해 알림. 서버에 없는 파일은 계속 `media_to_attach`
+
 ## 0.5.1
 - 헤더 규칙을 한 줄로 줄임: 중계가 `[relay:claude-code]` 헤더를 붙이니 직접 쓰거나 지우지 않음 (devicki/grokbot-relay 0.8.1)
 
