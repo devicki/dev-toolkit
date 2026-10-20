@@ -9,7 +9,7 @@ Claude Code から grokbot MCP リレー経由で自分の Grok Bot エージェ
 | スキル | 用途 |
 |---|---|
 | `/grokbot-relay:grokbot-relay` | 許可されたボットに質問を 1 つ送り、返事を持ち帰る（`grokbot__ask`、`check`、`list`） |
-| `/grokbot-relay:feedhand-handoff` | git log、PR、変更ファイル、README/CHANGELOG から素材を集めて投稿の切り口を 2〜3 個提案し、確認後に Feedhand へリクエストを送る |
+| `/grokbot-relay:feedhand-handoff` | git log、PR、変更ファイル、README/CHANGELOG から素材を集めて投稿の切り口を 2〜3 個提案し、確認後に Feedhand へリクエストを送る。`media` のサーバー上のファイル（`{host, path, note}`）は Feedhand が SSH で取得する |
 
 ## セットアップ
 

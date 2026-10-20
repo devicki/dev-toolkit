@@ -9,7 +9,7 @@
 | 技能 | 用途 |
 |---|---|
 | `/grokbot-relay:grokbot-relay` | 向允許的機器人送出一個問題並帶回回覆（`grokbot__ask`、`check`、`list`） |
-| `/grokbot-relay:feedhand-handoff` | 從 git log、PR、變更檔案與 README/CHANGELOG 收集素材，提出 2–3 個發文角度，確認後向 Feedhand 送出結構化請求 |
+| `/grokbot-relay:feedhand-handoff` | 從 git log、PR、變更檔案與 README/CHANGELOG 收集素材，提出 2–3 個發文角度，確認後向 Feedhand 送出結構化請求。`media` 中的伺服器檔案（`{host, path, note}`）由 Feedhand 透過 SSH 取得 |
 
 ## 設定
 

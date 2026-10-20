@@ -9,7 +9,7 @@ Claude Code에서 grokbot MCP 중계로 내 Grok Bot 에이전트에게 묻고, 
 | 스킬 | 용도 |
 |---|---|
 | `/grokbot-relay:grokbot-relay` | 허용된 봇에게 질문 하나를 보내고 답을 가져옴 (`grokbot__ask`, `check`, `list`) |
-| `/grokbot-relay:feedhand-handoff` | git log, PR, 변경 파일, README/CHANGELOG에서 소재를 찾아 게시 방향 2~3개를 제안하고, 확인을 받은 뒤 Feedhand에 요청서를 보냄 |
+| `/grokbot-relay:feedhand-handoff` | git log, PR, 변경 파일, README/CHANGELOG에서 소재를 찾아 게시 방향 2~3개를 제안하고, 확인을 받은 뒤 Feedhand에 요청서를 보냄. `media`의 서버 파일(`{host, path, note}`)은 Feedhand가 SSH로 가져감 |
 
 ## 설치
 
