@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import type { Member } from '../types'
-import { busyCount, cells, fitRow, shineAt, shineRuns, fromSession, sessionFor, oneLine, padCells, chronicle, dur, fanout, gauge, isStale, kTokens, STALE_MS, flowOf, fromHerdr, herdrCalls, modelOnScreen, runs, shortModel, wireCells, wrapCells } from '../hooks/model'
+import { busyCount, cells, fitRow, shineAt, shineRuns, fromSession, sessionFor, oneLine, padCells, chronicle, dur, fanout, gauge, isStale, kTokens, STALE_MS, flowOf, expandCalls, fromHerdr, herdrCalls, modelOnScreen, runs, shortModel, wireCells, wrapCells } from '../hooks/model'
 
 test('herdrCalls finds who the lead talks to, through quotes, options and chains', async () => {
   expect(herdrCalls(`herdr agent prompt wN:p2 "Review the diff; report \\"only\\" bugs" --wait --timeout 120000`)).toEqual([
@@ -16,6 +16,24 @@ test('herdrCalls finds who the lead talks to, through quotes, options and chains
   expect(herdrCalls(`herdr agent prompt wN:p4 "/teamwire" >/dev/null 2>&1`)).toEqual([{ verb: 'prompt', target: 'wN:p4', text: '/teamwire', wait: false }])
   expect(herdrCalls(`herdr agent list && git status`)).toEqual([])
   expect(herdrCalls(`echo "herdr agent prompt x hi"`)).toEqual([])
+})
+
+test('a helper or loop that takes its pane as a variable becomes one call per pane the command names', async () => {
+  const panes = [{ pane_id: 'wA:p3' }, { pane_id: 'wE:pG' }, { pane_id: 'wE:pS' }, { pane_id: 'wE:p3' }, { pane_id: 'wA:pQ' }]
+  const expand = (cmd: string) => expandCalls(cmd, herdrCalls(cmd), panes, 'wA:p3')
+  const helper = `ask() { herdr agent prompt "$1" "$2" --wait; }\nask pG "check openspec A"\nask wE:pS "check openspec B"`
+  expect(expand(helper)).toEqual([
+    { verb: 'prompt', target: 'wE:pG', text: 'check openspec A', wait: true },
+    { verb: 'prompt', target: 'wE:pS', text: 'check openspec B', wait: true },
+  ])
+  expect(expand(`for p in pG pS; do herdr agent prompt "$p" "same job"; done`).map(c => [c.target, c.text])).toEqual([
+    ['wE:pG', 'same job'],
+    ['wE:pS', 'same job'],
+  ])
+  // p3 is in two workspaces, the lead's own pane is never a target, a literal call keeps its pane, and no pane named: no call at all.
+  expect(expand(`for p in p3 wA:p3; do herdr agent prompt "$p" hi; done`)).toEqual([])
+  expect(expand(`herdr agent prompt wA:pQ "fe check"; for p in pG; do herdr agent prompt "$p" hi; done`).map(c => c.target)).toEqual(['wA:pQ', 'wE:pG'])
+  expect(expand(`ask() { herdr agent prompt "$1" "$2"; }`)).toEqual([])
 })
 
 const member = (patch: Partial<Member>): Member => ({ id: 'herdr:wN:p2', name: 'grok·p2', kind: 'herdr', engine: 'grok', role: '', state: 'idle', addedAt: 0, ...patch })

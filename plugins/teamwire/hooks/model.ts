@@ -57,7 +57,7 @@ export function words(cmd: string): string[] {
 
 /**
  * The herdr calls in a Bash command that talk to another agent.
- * shortcut: reads literal `herdr` invocations only, not ones built by variables or scripts; upgrade if leads start wrapping herdr.
+ * shortcut: a target in a variable is resolved only by the pane ids the command spells out (`expandCalls`); a helper sourced from a file or panes built at runtime stay unseen.
  */
 export function herdrCalls(cmd: string): HerdrCall[] {
   const w = words(cmd)
@@ -80,6 +80,36 @@ export function herdrCalls(cmd: string): HerdrCall[] {
     if (pos[0]) calls.push({ verb, target: pos[0], ...(verb === 'prompt' || verb === 'send' ? { text: pos.slice(1).join(' ') } : {}), wait })
   }
   return calls
+}
+
+/** A target or text the shell fills in (`"$1"`, `$p`), which the command string cannot name. */
+export const isVar = (s: string) => s.includes('$')
+
+/**
+ * Calls whose target is a shell variable, as one call per herdr pane the command names literally:
+ * a loop's list (`for p in wE:pG wE:pS`) or a helper's arguments (`ask wE:pG "check A"`), the word after a pane then its text.
+ * A bare pane number (`pG`) counts only where one pane has it; the lead's own pane is never a target.
+ */
+export function expandCalls(cmd: string, calls: HerdrCall[], panes: { pane_id: string; name?: string }[], self?: string): HerdrCall[] {
+  if (!calls.some(c => isVar(c.target))) return calls
+  const others = panes.filter(p => p.pane_id !== self)
+  const paneOf = (word: string) => {
+    const bare = panes.filter(p => p.pane_id.split(':')[1] === word)
+    return others.find(p => p.pane_id === word || p.name === word) ?? (bare.length === 1 && bare[0]!.pane_id !== self ? bare[0] : undefined)
+  }
+  const w = words(cmd)
+  const named: { pane: string; next?: string }[] = []
+  for (let i = 0; i < w.length; i++) {
+    const p = paneOf(w[i]!)
+    // A pane a literal call already names is that call's, not the helper's.
+    if (!p || named.some(n => n.pane === p.pane_id) || calls.some(c => c.target === w[i])) continue
+    const next = w[i + 1]
+    named.push({ pane: p.pane_id, next: next && next !== SEP && !next.startsWith('-') && !isVar(next) && !paneOf(next) ? next : undefined })
+  }
+  return calls.flatMap(c => {
+    if (!isVar(c.target)) return [c]
+    return named.map(n => ({ ...c, target: n.pane, ...(c.text !== undefined && isVar(c.text) ? { text: n.next ?? '' } : {}) }))
+  })
 }
 
 /** One line of a prompt, for a role. */

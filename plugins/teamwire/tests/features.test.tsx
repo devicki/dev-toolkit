@@ -178,3 +178,25 @@ test('a short pane says which sections it had no room for', async ($, on) => {
   expect(tall).not.toContain('hidden ·')
   expect(tall).toContain('1 handoffs')
 })
+
+test('a lead that prompts its panes through a shell helper wires each pane, never a member named $1', async ($, on) => {
+  on('clock.now', () => ({ value: NOW }) as never)
+  on('clock.every', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('ui.toast', () => ({ value: undefined }) as never)
+  on('env.get', (_, e) => ({ value: (e as { name: string }).name === 'HERDR_PANE_ID' ? 'wA:p3' : undefined }) as never)
+  const agents = ['wA:p3', 'wE:pG', 'wE:pS'].map(pane_id => ({ agent: 'grok', agent_status: 'working', pane_id }))
+  on('process.run', (_, e) => ok((e as { argv: string[] }).argv[2] === 'read' ? '' : JSON.stringify({ result: { agents } })))
+  on('tool.call', () => ({ result: 'ok', text: 'ok' }) as never)
+
+  await $.tool.call({ tool: 'Bash', command: `ask() { herdr agent prompt "$1" "$2"; }\nask pG "check openspec A"\nask pS "check openspec B"` } as never)
+
+  const ui = await $.ui.mount({ plugin: 'teamwire', surface: 'terminal', component: 'Pane', requestId: 'teamwire', props: PROPS, viewport: { columns: 112, rows: 60 } } as never)
+  const drawn = JSON.stringify(await ui.drawn())
+  expect(drawn).toContain('grok·pG')
+  expect(drawn).toContain('grok·pS')
+  expect(drawn).toContain('check openspec B')
+  expect(drawn).not.toContain('$1')
+  expect(drawn).not.toContain('grok·p3')
+  await ui.unmount()
+})

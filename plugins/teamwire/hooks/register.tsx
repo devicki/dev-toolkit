@@ -16,8 +16,10 @@ import {
   fromAgent,
   fromHerdr,
   fromSession,
+  expandCalls,
   fitRow,
   herdrCalls,
+  isVar,
   isStale,
   KIND_LABEL,
   LEAD,
@@ -203,16 +205,20 @@ const pollAgents = async ($: EngineInterface) => {
   )
 }
 
-const pollHerdr = async ($: EngineInterface) => {
-  if (!(await read($, membersAtom)).some(m => m.kind === 'herdr')) return
+const herdrAgents = async ($: EngineInterface): Promise<HerdrAgent[] | undefined> => {
   const r = await $.process.run(['herdr', 'agent', 'list']).catch(() => undefined)
   if (!r || r.exitCode !== 0) return
-  let agents: HerdrAgent[]
   try {
-    agents = (JSON.parse(r.stdout) as { result: { agents: HerdrAgent[] } }).result.agents
+    return (JSON.parse(r.stdout) as { result: { agents: HerdrAgent[] } }).result.agents
   } catch {
     return
   }
+}
+
+const pollHerdr = async ($: EngineInterface) => {
+  if (!(await read($, membersAtom)).some(m => m.kind === 'herdr')) return
+  const agents = await herdrAgents($)
+  if (!agents) return
   // One footer read per member whose model is not known yet.
   const models = new Map<string, string>()
   for (const m of await read($, membersAtom)) {
@@ -406,7 +412,9 @@ export const register: Register = on => {
 
   // The lead driving herdr panes: prompts and keys run out, reads pull the answer in.
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
-    const calls = e.agentId ? [] : herdrCalls(e.command ?? '')
+    let calls = e.agentId ? [] : herdrCalls(e.command ?? '')
+    // A helper or loop names its panes in its arguments, not after `herdr`.
+    if (calls.some(c => isVar(c.target))) calls = expandCalls(e.command ?? '', calls, (await herdrAgents($)) ?? [], await $.env.get('HERDR_PANE_ID'))
     if (!calls.length) return next(e)
     let waitOn: string | undefined
     for (const c of calls) {
