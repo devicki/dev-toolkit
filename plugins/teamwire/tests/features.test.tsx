@@ -200,3 +200,23 @@ test('a lead that prompts its panes through a shell helper wires each pane, neve
   expect(drawn).not.toContain('grok·p3')
   await ui.unmount()
 })
+
+test('answering a y/n prompt in a shell pane wires no member; a helper loop over workspaces adds no $p', async ($, on) => {
+  on('clock.now', () => ({ value: NOW }) as never)
+  on('clock.every', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('ui.toast', () => ({ value: undefined }) as never)
+  on('process.run', (_, e) => ok((e as { argv: string[] }).argv[2] === 'read' ? '' : herdr('working')))
+  on('tool.call', () => ({ result: 'ok', text: 'ok' }) as never)
+
+  await $.tool.call({ tool: 'Bash', command: `herdr pane send-text wQ:p2 'n'; herdr pane send-keys wQ:p2 enter` } as never)
+  await $.tool.call({ tool: 'Bash', command: `for w in wR wS; do p=$(herdr pane list --workspace $w); herdr pane send-text $p n; herdr pane send-keys $p enter; done` } as never)
+  await $.tool.call({ tool: 'Bash', command: `herdr pane send-text wN:p2 "run the tests"` } as never)
+
+  const ui = await $.ui.mount({ plugin: 'teamwire', surface: 'terminal', component: 'Pane', requestId: 'teamwire', props: PROPS, viewport: { columns: 112, rows: 60 } } as never)
+  const drawn = JSON.stringify(await ui.drawn())
+  expect(drawn).not.toContain('wQ:p2')
+  expect(drawn).not.toContain('$p')
+  expect(drawn).toContain('grok·p2') // text to an agent's pane is still a handoff
+  await ui.unmount()
+})
