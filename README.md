@@ -8,7 +8,7 @@ A Claude Code plugin marketplace by devicki: plugins and mods for day-to-day dev
 |---|---|---|---|
 | [erd](plugins/erd) | 0.4.2 | Skills | Design, document and maintain project ERDs with DBML (source of truth) and tbls (docs, Mermaid ERD, lint). Monorepo aware. |
 | [skill-spy](plugins/skill-spy) | 0.1.1 | Mod | When a turn ends, shows a toast for each skill that turn used. |
-| [teamwire](plugins/teamwire) | 0.1.8 | Mod | A live wiring diagram of your agent team, with current flowing between the lead and each member. |
+| [teamwire](plugins/teamwire) | 0.1.9 | Mod | A live wiring diagram of your agent team, with current flowing between the lead and each member. |
 | [grokbot-relay](plugins/grokbot-relay) | 0.5.2 | Skills | Ask your Grok Bot agents from Claude Code through a local MCP relay, and hand session work to Feedhand as a post request. |
 
 ## Install

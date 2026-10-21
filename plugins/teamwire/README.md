@@ -57,7 +57,7 @@ The pane opens by itself on the first handoff. Close it and it stays closed for 
 - A short pane keeps the dashboard and the diagram and drops COMMS, then ACTIVITY, then FOCUS; a line beside the keys names what it left out (`+ ACTIVITY 6 · COMMS 3 hidden`). A taller pane shows them. Long text is cut with `…` at the pane's edge; FOCUS shows a member's full task.
 - A mod runs inside Claude Code with your user permissions. It has no sandbox. teamwire runs the `herdr` command and nothing else, and writes no files; it reads other sessions' status files only.
 - Under an organization-managed Claude Code, plugins you install yourself may not receive these events.
-- Known limits: herdr calls built from variables or scripts are not detected; the CLI model is read from footers as they look today; another session's state comes from Claude Code's internal status file, so a change to that file would leave such members at their last state; messages between two members flash both wires instead of drawing a wire of their own.
+- Known limits: a herdr call that takes its pane from a variable (a shell helper or loop) finds its members by the pane ids the command spells out, and calls inside a sourced script are not detected; the CLI model is read from footers as they look today; another session's state comes from Claude Code's internal status file, so a change to that file would leave such members at their last state; messages between two members flash both wires instead of drawing a wire of their own.
 
 ## Development
 
