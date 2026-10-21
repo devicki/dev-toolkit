@@ -413,8 +413,11 @@ export const register: Register = on => {
   // The lead driving herdr panes: prompts and keys run out, reads pull the answer in.
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
     let calls = e.agentId ? [] : herdrCalls(e.command ?? '')
+    const agents = calls.some(c => isVar(c.target) || c.verb === 'send') ? await herdrAgents($) : undefined
     // A helper or loop names its panes in its arguments, not after `herdr`.
-    if (calls.some(c => isVar(c.target))) calls = expandCalls(e.command ?? '', calls, (await herdrAgents($)) ?? [], await $.env.get('HERDR_PANE_ID'))
+    if (calls.some(c => isVar(c.target))) calls = expandCalls(e.command ?? '', calls, agents ?? [], await $.env.get('HERDR_PANE_ID'))
+    // Text typed into a pane with no agent (a shell's y/n prompt) hands over no work.
+    if (agents) calls = calls.filter(c => c.verb !== 'send' || agents.some(a => a.pane_id === c.target || a.name === c.target))
     if (!calls.length) return next(e)
     let waitOn: string | undefined
     for (const c of calls) {
