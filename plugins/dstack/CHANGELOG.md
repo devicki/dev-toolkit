@@ -1,5 +1,8 @@
 # dstack plugin changelog
 
+## 0.2.1
+- `devicki-mode`: drop the fixed 4-tab cap. Open as many grok tabs as the playbook asks for, throttle only heavy local builds, tests, or port use, and never move a grok role to the Agent tool to go faster.
+
 ## 0.2.0
 - `devicki-mode`: pstack's poteto-mode as the base, read from the live pstack install, with every grok role (code playbooks, how explorer, why investigators, reflect tooling, swarm workers, the grok seats of panels) run as a grok tab through `herdr-grok-delegate`. At most 4 grok tabs at once.
 - `pstack_path.py`: finds the live pstack install from `installed_plugins.json` (the cache keeps old versions).
