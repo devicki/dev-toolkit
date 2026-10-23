@@ -10,7 +10,7 @@ A Claude Code plugin marketplace by devicki: plugins and mods for day-to-day dev
 | [skill-spy](plugins/skill-spy) | 0.1.1 | Mod | When a turn ends, shows a toast for each skill that turn used. |
 | [teamwire](plugins/teamwire) | 0.1.10 | Mod | A live wiring diagram of your agent team, with current flowing between the lead and each member. |
 | [grokbot-relay](plugins/grokbot-relay) | 0.5.2 | Skills | Ask your Grok Bot agents from Claude Code through a local MCP relay, and hand session work to Feedhand as a post request. |
-| [dstack](plugins/dstack) | 0.1.0 | Skills | Hand tasks to Grok CLI sessions in their own herdr tabs, then review the diff in Claude. Built to sit on top of pstack. |
+| [dstack](plugins/dstack) | 0.2.0 | Skills | Hand tasks to Grok CLI sessions in their own herdr tabs, then review the diff in Claude; `devicki-mode` runs pstack's poteto-mode with grok roles in herdr. |
 
 ## Install
 

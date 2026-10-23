@@ -8,6 +8,7 @@
 
 | 명령 | 용도 |
 |---|---|
+| `/dstack:devicki-mode` | 작업을 poteto-mode(pstack)로 진행하되, grok 역할은 모두 herdr의 grok 탭에서 돌립니다. 직접 입력할 때만 동작합니다. |
 | `/dstack:herdr-grok-delegate` | 작업을 전용 herdr 탭(`grok:<이름>`)의 grok에 넘기고, 보고서를 기다린 뒤 diff를 검토합니다. "grok한테 넘겨줘"로도 동작합니다. |
 
 ## 위임 흐름
@@ -21,6 +22,7 @@
 
 ## 필요 조건
 
+- `devicki-mode`용 [pstack](https://github.com/cursor/plugins/tree/main/pstack) (`/plugin marketplace add cursor/plugins`, `/plugin install pstack@cursor-plugins`)
 - herdr 페인 안에서 실행 중인 Claude Code (`HERDR_ENV=1`)
 - `PATH`에 `grok` CLI
 

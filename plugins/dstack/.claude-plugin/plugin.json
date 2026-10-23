@@ -1,6 +1,6 @@
 {
   "name": "dstack",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Personal agent workflow on top of pstack: delegate work to Grok CLI sessions in herdr panes.",
   "author": {
     "name": "devicki",
