@@ -8,6 +8,7 @@ devicki's agent workflow on top of [pstack](https://github.com/cursor/plugins/tr
 
 | Command | Purpose |
 |---|---|
+| `/dstack:devicki-mode` | Run a task in poteto-mode (pstack) with every grok role running as a grok tab in herdr. Type it directly; it never triggers on its own. |
 | `/dstack:herdr-grok-delegate` | Hand a task to grok in its own herdr tab (`grok:<name>`), wait for its report, then review the diff. Also triggers on "delegate this to grok". |
 
 ## How a delegation runs
@@ -21,6 +22,7 @@ With [teamwire](../teamwire) installed, each grok also shows up in the Team pane
 
 ## Requirements
 
+- [pstack](https://github.com/cursor/plugins/tree/main/pstack) for `devicki-mode` (`/plugin marketplace add cursor/plugins`, `/plugin install pstack@cursor-plugins`)
 - Claude Code running inside a herdr pane (`HERDR_ENV=1`)
 - `grok` CLI on `PATH`
 

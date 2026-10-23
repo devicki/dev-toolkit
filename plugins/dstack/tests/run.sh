@@ -76,6 +76,27 @@ test_close() {
   assert_eq "$(rc_of close --name g1)" 4
 }
 
+fake_install() { # fake_install <home> <json entries for pstack@cursor-plugins>
+  mkdir -p "$1/.claude/plugins"
+  echo "{\"version\":2,\"plugins\":{\"pstack@cursor-plugins\":$2}}" > "$1/.claude/plugins/installed_plugins.json"
+}
+test_pstack_path_live_version() {
+  local h="$WORK/home1"; mkdir -p "$h/old/skills/poteto-mode" "$h/new/skills/poteto-mode"
+  touch "$h/old/skills/poteto-mode/SKILL.md" "$h/new/skills/poteto-mode/SKILL.md"
+  fake_install "$h" "[{\"installPath\":\"$h/old\",\"version\":\"1\",\"lastUpdated\":\"2026-01\"},{\"installPath\":\"$h/new\",\"version\":\"2\",\"lastUpdated\":\"2026-10\"}]"
+  assert_eq "$(HOME="$h" python3 "$SCRIPTS/pstack_path.py")" "PSTACK_EXIT=0 root=$h/new version=2"
+}
+test_pstack_path_missing() {
+  local h="$WORK/home2" rc=0; mkdir -p "$h"
+  HOME="$h" python3 "$SCRIPTS/pstack_path.py" > "$WORK/out" 2>&1 || rc=$?
+  assert_eq "$rc" 3; grep -q '^PSTACK_EXIT=3 not-installed$' "$WORK/out"
+  fake_install "$h" "[{\"installPath\":\"$h/gone\",\"version\":\"1\"}]"
+  rc=0; HOME="$h" python3 "$SCRIPTS/pstack_path.py" >/dev/null 2>&1 || rc=$?
+  assert_eq "$rc" 3
+}
+
+t "pstack_path: picks the live install, not an old one" test_pstack_path_live_version
+t "pstack_path: missing install or deleted folder" test_pstack_path_missing
 t "run: new tab per grok, task carries the protocol" test_new_tab
 t "run: reuse a live grok by name, pass --model" test_reuse_and_model
 t "run: busy grok is not prompted" test_busy

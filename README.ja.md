@@ -10,7 +10,7 @@ devicki による Claude Code プラグインマーケットプレイスです�
 | [skill-spy](plugins/skill-spy) | 0.1.1 | mod | ターンが終わると、そのターンで使われたスキルごとにトーストを表示します。 |
 | [teamwire](plugins/teamwire) | 0.1.10 | mod | エージェントチームをリアルタイムの配線図で表示し、リードと各メンバーの間の流れを電流のように見せます。 |
 | [grokbot-relay](plugins/grokbot-relay) | 0.5.2 | スキル | Claude Code からローカル MCP リレー経由で自分の Grok Bot エージェントに質問し、セッションの作業を Feedhand への投稿リクエストとして渡します。 |
-| [dstack](plugins/dstack) | 0.1.0 | スキル | 作業を専用の herdr タブの Grok CLI セッションに渡し、Claude が diff をレビューします。pstack の上で使う想定です。 |
+| [dstack](plugins/dstack) | 0.2.0 | スキル | 作業を専用の herdr タブの Grok CLI セッションに渡し、Claude が diff をレビューします。`devicki-mode` は pstack の poteto-mode を、grok の役割だけ herdr で動かして実行します。 |
 
 ## インストール
 

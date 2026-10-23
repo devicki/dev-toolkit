@@ -50,7 +50,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/shared/scripts/delegate.py run --name <name> --bri
 Several independent tasks: one background run per name, sent in one response. Tell the user which tabs opened.
 
 ## Step 4: result
-The last line is `DELEGATE_EXIT=<code> <reason> key=value ...`.
+Read the line starting `DELEGATE_EXIT=<code> <reason> key=value ...`. It is not always the last line: Claude Code appends `[exited with code N]` to background output.
 
 | Exit | Reason | Do |
 |---|---|---|
