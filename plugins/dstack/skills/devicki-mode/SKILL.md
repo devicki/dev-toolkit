@@ -36,8 +36,12 @@ grok cannot see this conversation and does not list pstack skills. Each brief ca
 - For a read-only role (how explorer, why investigators, reflect tooling, reviewers, judges): "Do not edit any file." Check `git status` in its `--cwd` afterward.
 - For an editing role running beside others on the same repo: its own worktree as `--cwd`.
 
-### O3. fan-out cap
-At most 4 grok tabs at once. A larger swarm or panel queues the rest and starts each as a slot frees. Close each tab with `delegate.py close` once its result is reviewed and no follow-up needs it.
+### O3. fan-out
+No fixed cap: open as many grok tabs as the playbook asks for. pstack's swarm assumes cloud
+workers, but here every grok runs on this machine. When several slices run heavy builds or tests,
+or bind ports, run only as many at once as the machine handles and queue the rest.
+Never move a grok role to the Agent tool to go faster. Close each tab with `delegate.py close`
+once its result is reviewed and no follow-up needs it.
 
 ### O4. ownership
 grok's report is a self-assessment. Before a grok result counts in any step, read its diff and rerun the check the step names, the same as poteto-mode's "you own every subagent's work".
