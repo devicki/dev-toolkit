@@ -1,0 +1,19 @@
+{
+  "name": "dstack",
+  "version": "0.1.0",
+  "description": "Personal agent workflow on top of pstack: delegate work to Grok CLI sessions in herdr panes.",
+  "author": {
+    "name": "devicki",
+    "url": "https://github.com/devicki"
+  },
+  "homepage": "https://github.com/devicki/dev-toolkit/tree/main/plugins/dstack",
+  "repository": "https://github.com/devicki/dev-toolkit",
+  "license": "MIT",
+  "keywords": [
+    "pstack",
+    "herdr",
+    "grok",
+    "delegation",
+    "agents"
+  ]
+}

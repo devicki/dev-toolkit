@@ -25,6 +25,11 @@
       "name": "grokbot-relay",
       "source": "./plugins/grokbot-relay",
       "description": "Claude Code에서 로컬 grokbot MCP 중계로 내 Grok Bot 에이전트에게 묻고, 세션에서 한 작업을 Feedhand 게시 요청으로 넘기는 스킬. 중계 서버는 devicki/grokbot-relay, 게시 승인은 Feedhand 채팅에서만."
+    },
+    {
+      "name": "dstack",
+      "source": "./plugins/dstack",
+      "description": "pstack 위에서 쓰는 devicki의 에이전트 작업 방식. 작업을 herdr 전용 탭의 Grok CLI 세션에 넘기고 Claude가 diff를 검토한다."
     }
   ]
 }
