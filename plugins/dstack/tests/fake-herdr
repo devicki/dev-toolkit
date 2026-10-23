@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+# Minimal stand-in for the herdr CLI, enough for delegate.py. State lives in $FAKE_HERDR_STATE.
+# FAKE_MODE: ok (grok writes the report) · noreport (works, then idles) · stall (prompt never taken)
+import json, os, re, sys
+from pathlib import Path
+
+state_path = Path(os.environ["FAKE_HERDR_STATE"])
+st = json.loads(state_path.read_text()) if state_path.exists() else {"agents": {}, "tabs": {}, "n": 0, "log": []}
+mode = os.environ.get("FAKE_MODE", "ok")
+args = sys.argv[1:]
+st["log"].append(" ".join(args[:2]))
+
+
+def out(result):
+    state_path.write_text(json.dumps(st))
+    print(json.dumps({"id": "fake", "result": result}))
+    sys.exit(0)
+
+
+def err(code):
+    state_path.write_text(json.dumps(st))
+    print(json.dumps({"id": "fake", "error": {"code": code, "message": code}}), file=sys.stderr)
+    sys.exit(1)
+
+
+def find(name):
+    return st["agents"].get(name)
+
+
+match args[:2]:
+    case ["agent", "get"]:
+        a = find(args[2]) or err("agent_not_found")
+        if a.get("working_left", 0) > 0:
+            a["working_left"] -= 1
+            a["agent_status"] = "working" if a["working_left"] else "idle"
+        out({"agent": a})
+    case ["tab", "create"]:
+        st["n"] += 1
+        tab, pane = f"w1:t{st['n']}", f"w1:p{st['n']}"
+        st["tabs"][tab] = args[args.index("--label") + 1]
+        out({"tab": {"tab_id": tab}, "root_pane": {"pane_id": pane}})
+    case ["agent", "start"]:
+        name, pane = args[2], args[args.index("--pane") + 1]
+        tab = "w1:t" + pane.split(":p")[1]
+        st["agents"][name] = {"agent": "grok", "name": name, "pane_id": pane, "tab_id": tab, "agent_status": "idle",
+                              "argv": args[args.index("--") + 1:]}
+        out({"agent": st["agents"][name]})
+    case ["agent", "prompt"]:
+        a = find(args[2]) or err("agent_not_found")
+        if mode == "stall":
+            err("agent_prompt_stalled")
+        if mode == "noreport":
+            a["agent_status"], a["working_left"] = "working", 2
+            err("timeout")
+        task = re.search(r"Read (\S+) and do", args[3]).group(1)
+        report = re.search(r"write your report to (\S+)\. ", Path(task).read_text()).group(1)
+        Path(report).write_text("# Report\nchanged nothing\n\nGROK_DONE\n")
+        a["agent_status"] = "done"
+        out({"agent": a})
+    case ["agent", "read"]:
+        print("fake pane tail")
+        sys.exit(0)
+    case ["tab", "close"]:
+        st["tabs"].pop(args[2], None) or err("tab_not_found")
+        st["agents"] = {k: v for k, v in st["agents"].items() if v["tab_id"] != args[2]}
+        out({})
+    case _:
+        err("unsupported")

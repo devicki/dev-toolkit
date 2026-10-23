@@ -10,6 +10,7 @@ devicki의 Claude Code 플러그인 마켓플레이스입니다. 일상 개발 �
 | [skill-spy](plugins/skill-spy) | 0.1.1 | 모드 | 턴이 끝나면 그 턴에 쓰인 스킬을 토스트로 알려줍니다 |
 | [teamwire](plugins/teamwire) | 0.1.10 | 모드 | 팀 작업을 실시간 배선도로 보여주고, 팀장과 팀원 사이의 흐름을 전류처럼 표시합니다 |
 | [grokbot-relay](plugins/grokbot-relay) | 0.5.2 | 스킬 | Claude Code에서 로컬 MCP 중계로 내 Grok Bot 에이전트에게 묻고, 세션 작업을 Feedhand 게시 요청으로 넘깁니다 |
+| [dstack](plugins/dstack) | 0.1.0 | 스킬 | 작업을 herdr 전용 탭의 Grok CLI 세션에 넘기고, Claude가 diff를 검토합니다. pstack 위에서 쓰도록 만들었습니다 |
 
 ## 설치
 
@@ -21,6 +22,7 @@ Claude Code 안에서:
 /plugin install skill-spy@dev-toolkit
 /plugin install teamwire@dev-toolkit
 /plugin install grokbot-relay@dev-toolkit
+/plugin install dstack@dev-toolkit
 ```
 
 셸에서:
@@ -31,6 +33,7 @@ claude plugin install erd@dev-toolkit
 claude plugin install skill-spy@dev-toolkit
 claude plugin install teamwire@dev-toolkit
 claude plugin install grokbot-relay@dev-toolkit
+claude plugin install dstack@dev-toolkit
 ```
 
 업데이트하려면 `/plugin marketplace update dev-toolkit`을 실행한 뒤, 열려 있는 세션에서 `/reload-plugins`를 실행하세요.

@@ -10,6 +10,7 @@ devicki による Claude Code プラグインマーケットプレイスです�
 | [skill-spy](plugins/skill-spy) | 0.1.1 | mod | ターンが終わると、そのターンで使われたスキルごとにトーストを表示します。 |
 | [teamwire](plugins/teamwire) | 0.1.10 | mod | エージェントチームをリアルタイムの配線図で表示し、リードと各メンバーの間の流れを電流のように見せます。 |
 | [grokbot-relay](plugins/grokbot-relay) | 0.5.2 | スキル | Claude Code からローカル MCP リレー経由で自分の Grok Bot エージェントに質問し、セッションの作業を Feedhand への投稿リクエストとして渡します。 |
+| [dstack](plugins/dstack) | 0.1.0 | スキル | 作業を専用の herdr タブの Grok CLI セッションに渡し、Claude が diff をレビューします。pstack の上で使う想定です。 |
 
 ## インストール
 
@@ -21,6 +22,7 @@ Claude Code の中で:
 /plugin install skill-spy@dev-toolkit
 /plugin install teamwire@dev-toolkit
 /plugin install grokbot-relay@dev-toolkit
+/plugin install dstack@dev-toolkit
 ```
 
 シェルから:
@@ -31,6 +33,7 @@ claude plugin install erd@dev-toolkit
 claude plugin install skill-spy@dev-toolkit
 claude plugin install teamwire@dev-toolkit
 claude plugin install grokbot-relay@dev-toolkit
+claude plugin install dstack@dev-toolkit
 ```
 
 更新するには `/plugin marketplace update dev-toolkit` を実行し、開いているセッションで `/reload-plugins` を実行します。

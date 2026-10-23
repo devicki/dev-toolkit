@@ -3,6 +3,7 @@
 플러그인별 변경 이력은 각 플러그인 폴더의 `CHANGELOG.md` 를 본다.
 
 ## 2026-10
+- dstack 0.1.0: `herdr-grok-delegate` — 작업을 herdr 전용 탭의 grok에 넘기고 보고서 파일로 완료를 판정한 뒤 Claude가 diff 검토 ([plugins/dstack/CHANGELOG.md](plugins/dstack/CHANGELOG.md))
 - grokbot-relay 0.5.0 ~ 0.5.1: 중계 발신자 헤더 `[relay:claude-code]` 규칙 (0.5.1에서 한 줄로 줄임)
 - grokbot-relay 0.1.0 ~ 0.4.0: Claude Code에서 내 Grok Bot 에이전트에게 묻고 Feedhand 게시 요청을 넘기는 스킬 ([plugins/grokbot-relay/CHANGELOG.md](plugins/grokbot-relay/CHANGELOG.md)). 중계 서버는 devicki/grokbot-relay로 분리
 - README 일본어(`README.ja.md`)·번체 중국어(`README.zh-TW.md`) 추가: 루트와 erd·skill-spy·teamwire. `validate.py` 가 `README.zh-TW.md` 같은 지역 코드 README 도 문서로 보고 버전 올림을 요구하지 않음

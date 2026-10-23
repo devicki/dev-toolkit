@@ -10,6 +10,7 @@ devicki 的 Claude Code 外掛市集，收錄日常開發工作會用到的外�
 | [skill-spy](plugins/skill-spy) | 0.1.1 | mod | 每一輪結束時，為該輪用到的每個技能顯示一則提示。 |
 | [teamwire](plugins/teamwire) | 0.1.10 | mod | 以即時配線圖呈現你的代理團隊，像電流一樣顯示領導與每位成員之間的往來。 |
 | [grokbot-relay](plugins/grokbot-relay) | 0.5.2 | 技能 | 在 Claude Code 中透過本機 MCP 中繼向你的 Grok Bot 代理提問，並把工作階段的成果交給 Feedhand 作為發文請求。 |
+| [dstack](plugins/dstack) | 0.1.0 | 技能 | 把工作交給 herdr 專屬分頁中的 Grok CLI 工作階段，再由 Claude 審查 diff。設計為搭配 pstack 使用。 |
 
 ## 安裝
 
@@ -21,6 +22,7 @@ devicki 的 Claude Code 外掛市集，收錄日常開發工作會用到的外�
 /plugin install skill-spy@dev-toolkit
 /plugin install teamwire@dev-toolkit
 /plugin install grokbot-relay@dev-toolkit
+/plugin install dstack@dev-toolkit
 ```
 
 在終端機中：
@@ -31,6 +33,7 @@ claude plugin install erd@dev-toolkit
 claude plugin install skill-spy@dev-toolkit
 claude plugin install teamwire@dev-toolkit
 claude plugin install grokbot-relay@dev-toolkit
+claude plugin install dstack@dev-toolkit
 ```
 
 要更新時，執行 `/plugin marketplace update dev-toolkit`，再於開著的工作階段中執行 `/reload-plugins`。
