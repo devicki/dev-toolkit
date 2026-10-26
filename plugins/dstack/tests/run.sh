@@ -36,10 +36,13 @@ test_new_tab() {
   grep -q '^do it$' "$WORK"/tmp/dstack-*/g1-*.task.md
 }
 test_reuse_and_model() {
-  D run --name g1 --brief brief.md --model grok-x >/dev/null
-  assert_eq "$(state "s['agents']['g1']['argv']")" "['--always-approve', '-m', 'grok-x']"
-  D run --name g1 --brief brief.md | grep -q "^= reusing grok 'g1' in tab w1:t1"
+  D run --name g1 --brief brief.md --model grok-x --effort high >/dev/null
+  assert_eq "$(state "s['agents']['g1']['argv']")" "['--always-approve', '-m', 'grok-x', '--reasoning-effort', 'high']"
+  D run --name g1 --brief brief.md --effort low | grep -q "^= reusing grok 'g1' in tab w1:t1"
+  grep -q 'ignored' "$WORK/out"
+  assert_eq "$(state "s['agents']['g1']['argv']")" "['--always-approve', '-m', 'grok-x', '--reasoning-effort', 'high']"
   assert_eq "$(state "len(s['tabs'])")" 1
+  assert_eq "$(rc_of run --name g2 --brief brief.md --effort max)" 2
 }
 test_busy() {
   D run --name g1 --brief brief.md >/dev/null
@@ -63,6 +66,19 @@ test_idle_without_report() {
 test_timeout() {
   export FAKE_MODE=noreport DSTACK_IDLE_GRACE=100
   assert_eq "$(rc_of run --name g1 --brief brief.md --timeout 0.5)" 6
+}
+test_wait_after_timeout() {
+  export FAKE_MODE=noreport DSTACK_IDLE_GRACE=100
+  assert_eq "$(rc_of run --name g1 --brief brief.md --timeout 0.5)" 6
+  local report; report="$(last | sed 's/.* report=//')"
+  printf '# Report\n\nGROK_DONE\n' > "$report"
+  assert_eq "$(rc_of wait --name g1 --report "$report")" 0
+  assert_eq "$(state "s['log'].count('agent prompt')")" 1
+}
+test_wait_idle_and_gone() {
+  D run --name g1 --brief brief.md >/dev/null
+  assert_eq "$(rc_of wait --name g1 --report "$WORK/none.md")" 8
+  assert_eq "$(rc_of wait --name nope --report "$WORK/none.md")" 4
 }
 test_guards() {
   assert_eq "$(HERDR_ENV= rc_of run --name g1 --brief brief.md)" 2
@@ -98,12 +114,14 @@ test_pstack_path_missing() {
 t "pstack_path: picks the live install, not an old one" test_pstack_path_live_version
 t "pstack_path: missing install or deleted folder" test_pstack_path_missing
 t "run: new tab per grok, task carries the protocol" test_new_tab
-t "run: reuse a live grok by name, pass --model" test_reuse_and_model
+t "run: reuse a live grok by name, pass --model and --effort" test_reuse_and_model
 t "run: busy grok is not prompted" test_busy
 t "run: refuses a non-grok agent" test_not_grok
 t "run: dropped prompt is resent once, then stalled" test_prompt_stalled_resends_once
 t "run: idle without a report" test_idle_without_report
 t "run: timeout" test_timeout
+t "wait: keeps waiting after a timeout, sends no new prompt" test_wait_after_timeout
+t "wait: idle grok is idle-no-report, unknown name is gone" test_wait_idle_and_gone
 t "guards: outside herdr, bad name, missing brief" test_guards
 t "close: closes the tab, second close is gone" test_close
 echo; echo "Result: PASS $PASS · FAIL $FAIL · SKIP $SKIP"; [ $FAIL = 0 ]
