@@ -27,6 +27,7 @@ Task: $ARGUMENTS (empty: continue the current work).
 Resolve each role's model the way poteto-mode says (the line in `~/.claude/rules/pstack-models.md`, else the skill default). The role is a **grok role** when the value is a `grok-*` slug, or when it is `inherit-parent` or `auto` and the pstack default for that role is a `grok-*` slug (Claude Code's setup-pstack writes grok defaults as `inherit-parent`). A role set to a Claude model (`opus xhigh`, `sonnet high`, …) is not a grok role.
 
 - A grok role never uses the Agent tool. Run it through the **herdr-grok-delegate** skill (`${CLAUDE_PLUGIN_ROOT}/skills/herdr-grok-delegate/SKILL.md`): one named grok tab per subagent, `delegate.py run` in the background.
+- Pass each grok role its model on `delegate.py run`. Start from the role's slug (for `inherit-parent` or `auto`, the pstack default slug) and set its effort per poteto-mode's **Match the model to the job**. Write `grok-<version>-<effort>[-fast]` as `--model grok-<version> --effort <effort>`. grok takes `low`, `medium`, `high`, `xhigh`, so use the nearest (`max` → `xhigh`). Drop `-fast`, as the adapter does for Claude slugs. If grok does not start with that model, rerun without `--model` and say so.
 - A panel list (arena runners, architect runners, interrogate reviewers, arena cross-judge pool) keeps its count. Its grok entries run in herdr, its Claude entries run with Agent. This keeps the panel's model diversity in Claude Code.
 - Every other role keeps poteto-mode's routing: `pstack:poteto-agent` or the subagent type the routed skill prescribes.
 
@@ -41,7 +42,7 @@ No fixed cap: open as many grok tabs as the playbook asks for. pstack's swarm as
 workers, but here every grok runs on this machine. When several slices run heavy builds or tests,
 or bind ports, run only as many at once as the machine handles and queue the rest.
 Never move a grok role to the Agent tool to go faster. Close each tab with `delegate.py close`
-once its result is reviewed and no follow-up needs it.
+once its result is reviewed (herdr-grok-delegate Step 5); a fix round goes to a fresh grok.
 
 ### O4. ownership
 grok's report is a self-assessment. Before a grok result counts in any step, read its diff and rerun the check the step names, the same as poteto-mode's "you own every subagent's work".

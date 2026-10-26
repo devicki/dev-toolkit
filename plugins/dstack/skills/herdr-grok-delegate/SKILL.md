@@ -30,7 +30,9 @@ allowed-tools:
 - `HERDR_ENV=1` and `command -v grok`. If either is missing, say so and stop.
 
 ## Step 1: name and place
-- Name: `grok-<short-slug>` (pattern `[a-z][a-z0-9_-]{0,31}`). New work gets a new name. Reuse a live name only for a follow-up that needs that session's context.
+- Name: `grok-<short-slug>` (pattern `[a-z][a-z0-9_-]{0,31}`). New work gets a new name and a fresh grok. That includes a fix round, a follow-up, a retry, and the next queue item: put the original brief, every later directive, and the prior report in the new brief.
+- Reuse a live name only when the new work strictly needs state that lives in that session and is costly to move, such as a dev server or watcher it still runs. A fresh grok on the same `--cwd` already sees that checkout and its uncommitted changes, so those are not a reason to reuse. When the user asks to continue in the same grok tab, reuse it.
+- A grok that stopped without a report (exit 8) has ended its turn. Answering its question is a follow-up, so it goes to a fresh grok like any other round. Waiting on a grok that is still working (exit 6, `delegate.py wait`) is not reuse.
 - `--cwd`: the repository the task is about. Parallel grok runs that edit the same repo need separate worktrees (`git worktree add`), one `--cwd` each.
 
 ## Step 2: write the brief
@@ -45,8 +47,9 @@ grok cannot see this conversation. Write a file in your scratchpad with:
 
 ## Step 3: run
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/shared/scripts/delegate.py run --name <name> --brief <file> [--cwd <dir>] [--model <grok model id>] [--timeout <sec, default 3600>]
+python3 ${CLAUDE_PLUGIN_ROOT}/shared/scripts/delegate.py run --name <name> --brief <file> [--cwd <dir>] [--model <grok model id>] [--effort low|medium|high|xhigh] [--timeout <sec, default 3600>]
 ```
+`--model` and `--effort` apply only when a grok starts. Omit them to use grok's defaults, unless the user names a model or effort, or the calling mode (devicki-mode O1) sets them.
 Several independent tasks: one background run per name, sent in one response. Tell the user which tabs opened.
 
 ## Step 4: result
@@ -59,16 +62,16 @@ Read the line starting `DELEGATE_EXIT=<code> <reason> key=value ...`. It is not 
 | 3 | busy | The name is working or blocked. Wait, or use a new name |
 | 4 | gone | The agent or tab closed. Start again with a new run |
 | 5 | blocked | grok shows a dialog. Show the pane tail to the user and ask before answering |
-| 6 | timeout | The tab is still open. Read the pane, then rerun with the same name to continue or close it |
+| 6 | timeout | grok may still be working. Keep waiting with `delegate.py wait --name <name> --report <report from the exit line> [--timeout <sec>]` in the background; it sends no new prompt. Close the tab instead if the task is no longer needed |
 | 7 | stalled | The prompt was not taken twice. Show the pane tail and stop |
-| 8 | idle-no-report | grok stopped without a report, often to ask a question. Answer it with a follow-up run on the same name if you can; otherwise ask the user |
+| 8 | idle-no-report | grok stopped without a report, often to ask a question. Read the pane tail. If you can answer, close the tab and give a fresh grok the original brief, its question, and your answer (Step 1); otherwise ask the user |
 
 ## Step 5: review and report
 1. Read the report.
 2. In `--cwd`: `git status` and `git diff`. Check the change does what the brief asked and nothing more.
 3. Rerun the verification command yourself.
 4. Reply: what changed, your verdict, the verification output you saw, open issues, and the tab name.
-5. `delegate.py close --name <name>` when no follow-up is expected. Leave it open if the user wants to watch or continue.
+5. `delegate.py close --name <name>` once the result is reviewed. A fix round goes to a fresh grok (Step 1), so it is no reason to keep the tab. Leave it open only if the user wants to watch or continue in it, or it runs a process the next round needs.
 
 ## Checklist (before reply)
 - [ ] Verdict is based on the diff and your own check, not only the report

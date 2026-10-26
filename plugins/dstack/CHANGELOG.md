@@ -1,5 +1,11 @@
 # dstack plugin changelog
 
+## 0.2.2
+- `herdr-grok-delegate`: reuse a live grok only when the new work strictly needs state in that session (a process it still runs), matching poteto-mode's fresh-subagent default. Fix rounds, follow-ups, and retries go to a fresh grok with the prior brief and report; close the tab once the result is reviewed. A user who asks to continue in the same tab still gets it.
+- `herdr-grok-delegate`: a grok that stopped without a report (exit 8) is answered through a fresh grok, not the same session. After a timeout (exit 6), `delegate.py wait` keeps waiting on the same task without sending a new prompt.
+- `delegate.py`: `--effort low|medium|high|xhigh` passes grok's `--reasoning-effort` when a grok starts; new `wait --name --report` subcommand.
+- `devicki-mode`: O3 closes each tab once its result is reviewed, matching `herdr-grok-delegate`. O1 passes each grok role's model and effort, from the pstack slug with poteto-mode's effort tiering (`grok-4.7-xhigh-fast` → `--model grok-4.7 --effort xhigh`).
+
 ## 0.2.1
 - `devicki-mode`: drop the fixed 4-tab cap. Open as many grok tabs as the playbook asks for, throttle only heavy local builds, tests, or port use, and never move a grok role to the Agent tool to go faster.
 

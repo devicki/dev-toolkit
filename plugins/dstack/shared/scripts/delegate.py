@@ -2,7 +2,8 @@
 """Delegate one task to a Grok CLI agent in its own herdr tab and wait for its report file.
 
 Usage:
-  delegate.py run --name NAME --brief FILE [--cwd DIR] [--model M] [--timeout SEC]
+  delegate.py run --name NAME --brief FILE [--cwd DIR] [--model M] [--effort E] [--timeout SEC]
+  delegate.py wait --name NAME --report FILE [--timeout SEC]
   delegate.py close --name NAME
 
 Completion is the report file ending in GROK_DONE, not the pane state:
@@ -20,6 +21,7 @@ from pathlib import Path
 
 EXIT = {"ok": 0, "usage": 2, "busy": 3, "gone": 4, "blocked": 5, "timeout": 6, "stalled": 7, "idle-no-report": 8}
 DONE = "GROK_DONE"
+EFFORTS = ("low", "medium", "high", "xhigh")  # what grok --reasoning-effort accepts
 NAME_RE = re.compile(r"^[a-z][a-z0-9_-]{0,31}$")
 POLL = float(os.environ.get("DSTACK_POLL", "5"))
 STALL = float(os.environ.get("DSTACK_STALL", "90"))
@@ -71,7 +73,7 @@ def pane_tail(name: str, lines: int = 25) -> str:
     return p.stdout.strip()
 
 
-def start(name: str, cwd: str, model: str | None) -> dict:
+def start(name: str, cwd: str, model: str | None, effort: str | None) -> dict:
     # One tab per grok: several split panes in the lead's tab get too small to watch.
     r = herdr("tab", "create", "--workspace", os.environ["HERDR_WORKSPACE_ID"], "--cwd", cwd,
               "--label", f"grok:{name}", "--no-focus")
@@ -79,7 +81,7 @@ def start(name: str, cwd: str, model: str | None) -> dict:
         print("✘ tab create failed", file=sys.stderr)
         finish("gone")
     pane, tab = r["root_pane"]["pane_id"], r["tab"]["tab_id"]
-    grok_args = ["--always-approve"] + (["-m", model] if model else [])
+    grok_args = ["--always-approve"] + (["-m", model] if model else []) + (["--reasoning-effort", effort] if effort else [])
     if not herdr("agent", "start", name, "--kind", "grok", "--pane", pane, "--", *grok_args):
         print(f"✘ grok did not become ready in {pane}", file=sys.stderr)
         finish("stalled", tab=tab, pane=pane)
@@ -123,8 +125,10 @@ def run(a: argparse.Namespace) -> None:
         finish("busy", name=a.name, tab=cur.get("tab_id"), status=cur["agent_status"])
     if cur:
         print(f"= reusing grok '{a.name}' in tab {cur.get('tab_id')}")
+        if a.model or a.effort:
+            print("  --model/--effort apply only when a grok starts; ignored")
     else:
-        cur = start(a.name, cwd, a.model)
+        cur = start(a.name, cwd, a.model, a.effort)
     pane, tab = cur["pane_id"], cur.get("tab_id")
 
     state = Path(os.environ.get("TMPDIR", "/tmp")) / f"dstack-{os.getuid()}"
@@ -140,33 +144,43 @@ def run(a: argparse.Namespace) -> None:
         print(f"✘ prompt not taken by '{a.name}': {err}", file=sys.stderr)
         finish("blocked" if err == "agent_blocked" else "stalled", name=a.name, tab=tab)
     print(f"~ task sent: {task}")
+    watch(a.name, tab, report, a.timeout, seen_work=False)
 
+
+def wait(a: argparse.Namespace) -> None:
+    cur = agent(a.name)
+    if not cur:
+        finish("gone", name=a.name)
+    # The task was already taken, so an idle grok means it stopped, not that the prompt stalled.
+    watch(a.name, cur.get("tab_id"), Path(a.report), a.timeout, seen_work=True)
+
+
+def watch(name: str, tab: str | None, report: Path, timeout: float, seen_work: bool) -> None:
     t0 = time.time()
-    seen_work = False
     idle_since = None
     while True:
         if report_done(report):
-            finish("ok", name=a.name, tab=tab, report=report)
+            finish("ok", name=name, tab=tab, report=report)
         now = time.time()
-        if now - t0 > a.timeout:
-            finish("timeout", name=a.name, tab=tab, report=report)
-        cur = agent(a.name)
+        if now - t0 > timeout:
+            finish("timeout", name=name, tab=tab, report=report)
+        cur = agent(name)
         if not cur:
-            finish("gone", name=a.name, tab=tab)
+            finish("gone", name=name, tab=tab)
         status = cur.get("agent_status")
         if status == "blocked":
-            print(pane_tail(a.name))
-            finish("blocked", name=a.name, tab=tab)
+            print(pane_tail(name))
+            finish("blocked", name=name, tab=tab)
         if status == "working":
             seen_work, idle_since = True, None
         elif not seen_work and now - t0 > STALL:
-            print(pane_tail(a.name))
-            finish("stalled", name=a.name, tab=tab)
+            print(pane_tail(name))
+            finish("stalled", name=name, tab=tab)
         elif seen_work:
             idle_since = idle_since or now
             if now - idle_since > IDLE_GRACE:
-                print(pane_tail(a.name))
-                finish("idle-no-report", name=a.name, tab=tab, report=report)
+                print(pane_tail(name))
+                finish("idle-no-report", name=name, tab=tab, report=report)
         time.sleep(POLL)
 
 
@@ -190,7 +204,12 @@ def main() -> None:
     r.add_argument("--brief", required=True)
     r.add_argument("--cwd")
     r.add_argument("--model")
+    r.add_argument("--effort", choices=EFFORTS)
     r.add_argument("--timeout", type=float, default=3600)
+    w = sub.add_parser("wait")
+    w.add_argument("--name", required=True)
+    w.add_argument("--report", required=True)
+    w.add_argument("--timeout", type=float, default=3600)
     c = sub.add_parser("close")
     c.add_argument("--name", required=True)
     a = ap.parse_args()
@@ -201,7 +220,7 @@ def main() -> None:
     if not NAME_RE.match(a.name):
         print("✘ name must match [a-z][a-z0-9_-]{0,31}", file=sys.stderr)
         finish("usage")
-    run(a) if a.cmd == "run" else close(a)
+    {"run": run, "wait": wait, "close": close}[a.cmd](a)
 
 
 if __name__ == "__main__":
