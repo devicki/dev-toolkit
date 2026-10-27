@@ -1,5 +1,9 @@
 # grokbot-relay 플러그인 변경 이력
 
+## Unreleased (문서만, 버전 미정)
+- grokbot-relay: `finished`는 「이번 답이 왔다」이지 「일이 끝났다」가 아님을 명시. 답이 뒷단 작업을 예고하면 예상 완료 시각에 `grokbot__check` 확인을 잡고 사용자에게 그 시각을 알림. 오래 걸리는 일은 완료 보고에 분명한 표시를 붙여 달라고 요청
+- grokbot-relay: Grok Bot 호출은 `call_tool(toolName="grokbot__ask"|"grokbot__check", input={agent, ...})`로만. 상위 `mcp__grokbot__ask`/`check`는 relay 자체 세션용이라 Grok Bot sessionId를 넣으면 `Unknown session`
+
 ## 0.5.2
 - feedhand-handoff: `media`에 서버 파일을 `{host, path, note}`로 적으면 Feedhand가 SSH로 직접 가져옴(devicki/feedhand `media fetch`). 보내기 전에 파일 존재와 크기를 확인해 알림. 서버에 없는 파일은 계속 `media_to_attach`
 
