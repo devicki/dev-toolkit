@@ -9,7 +9,7 @@ devicki 的 Claude Code 外掛市集，收錄日常開發工作會用到的外�
 | [erd](plugins/erd) | 0.4.2 | 技能 | 用 DBML（結構描述的原始來源）和 tbls（文件、Mermaid ERD、lint）設計、記錄並維護專案的 ERD。支援 monorepo。 |
 | [skill-spy](plugins/skill-spy) | 0.1.1 | mod | 每一輪結束時，為該輪用到的每個技能顯示一則提示。 |
 | [teamwire](plugins/teamwire) | 0.1.10 | mod | 以即時配線圖呈現你的代理團隊，像電流一樣顯示領導與每位成員之間的往來。 |
-| [grokbot-relay](plugins/grokbot-relay) | 0.5.2 | 技能 | 在 Claude Code 中透過本機 MCP 中繼向你的 Grok Bot 代理提問，並把工作階段的成果交給 Feedhand 作為發文請求。 |
+| [grokbot-relay](plugins/grokbot-relay) | 0.5.3 | 技能 | 在 Claude Code 中透過本機 MCP 中繼向你的 Grok Bot 代理提問，並把工作階段的成果交給 Feedhand 作為發文請求。 |
 | [dstack](plugins/dstack) | 0.2.2 | 技能 | 把工作交給 herdr 專屬分頁中的 Grok CLI 工作階段，再由 Claude 審查 diff。`devicki-mode` 以 pstack 的 poteto-mode 執行，grok 角色改在 herdr 中執行。 |
 
 ## 安裝
