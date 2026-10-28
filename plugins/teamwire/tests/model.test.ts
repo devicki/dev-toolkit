@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import type { Member } from '../types'
-import { busyCount, cells, fitRow, shineAt, shineRuns, fromSession, sessionFor, oneLine, padCells, chronicle, dur, fanout, gauge, isStale, kTokens, STALE_MS, flowOf, expandCalls, fromHerdr, herdrCalls, modelOnScreen, runs, shortModel, wireCells, wrapCells } from '../hooks/model'
+import { briefLine, busyCount, cells, fitRow, shineAt, shineRuns, fromSession, sessionFor, oneLine, padCells, chronicle, dur, fanout, gauge, isStale, kTokens, STALE_MS, flowOf, expandCalls, fromHerdr, herdrCalls, modelOnScreen, runs, shortModel, wireCells, wrapCells } from '../hooks/model'
 
 test('herdrCalls finds who the lead talks to, through quotes, options and chains', async () => {
   expect(herdrCalls(`herdr agent prompt wN:p2 "Review the diff; report \\"only\\" bugs" --wait --timeout 120000`)).toEqual([
@@ -34,6 +34,32 @@ test('a helper or loop that takes its pane as a variable becomes one call per pa
   expect(expand(`for p in p3 wA:p3; do herdr agent prompt "$p" hi; done`)).toEqual([])
   expect(expand(`herdr agent prompt wA:pQ "fe check"; for p in pG; do herdr agent prompt "$p" hi; done`).map(c => c.target)).toEqual(['wA:pQ', 'wE:pG'])
   expect(expand(`ask() { herdr agent prompt "$1" "$2"; }`)).toEqual([])
+})
+
+test('dstack delegate.py calls are herdr calls: run prompts and waits, wait waits, close ends; names come from --name', async () => {
+  const D = `D=/home/bot/.claude/plugins/cache/dev-toolkit/dstack/0.2.2/shared/scripts/delegate.py; S=/tmp/dstack-s`
+  expect(herdrCalls(`${D}\npython3 $D run --name grok-s11-w8b --brief $S/step11/impl-w8.md --cwd /w/wt8 --model grok-4.7 --effort xhigh --timeout 7200 > $S/run.log 2>&1`)).toEqual([
+    { verb: 'prompt', target: 'grok-s11-w8b', text: 'delegate: grok-s11-w8b', brief: '/tmp/dstack-s/step11/impl-w8.md', wait: true },
+  ])
+  expect(herdrCalls(`python3 \${CLAUDE_PLUGIN_ROOT}/shared/scripts/delegate.py wait --name=ai-fe --report /tmp/r.md --timeout 3600`)).toEqual([{ verb: 'wait', target: 'ai-fe', wait: true }])
+  expect(herdrCalls(`${D}; python3 $D close --name grok-s11-w3; python3 $D close --name grok-s11-w4; python3 $D run --name grok-vi1-review --brief /b.md`).map(c => [c.verb, c.target])).toEqual([
+    ['close', 'grok-s11-w3'],
+    ['close', 'grok-s11-w4'],
+    ['prompt', 'grok-vi1-review'],
+  ])
+  // A loop fans out to one member per value, each with its own brief.
+  const loop = `${D}; for n in 1 2 3 4; do python3 $D run --name grok-s11-a$n --brief $S/brief-a$n.md > $S/run-a$n.log 2>&1 & done; wait`
+  expect(herdrCalls(loop).map(c => [c.target, c.brief])).toEqual([1, 2, 3, 4].map(n => [`grok-s11-a${n}`, `/tmp/dstack-s/brief-a${n}.md`]))
+  expect(herdrCalls(`${D}; for p in w1 w2 w5 w8; do python3 $D run --name grok-s11-$p --brief /b-$p.md & done; wait`).map(c => c.target)).toEqual(['grok-s11-w1', 'grok-s11-w2', 'grok-s11-w5', 'grok-s11-w8'])
+  expect(herdrCalls(`${D}; for n in {1..2}; do python3 $D run --name g$n --brief /b.md & done`).map(c => c.target)).toEqual(['g1', 'g2'])
+  // A name the command cannot spell (runtime value, unknown variable) wires nobody, never a member named grok-s11-a$n.
+  expect(herdrCalls(`${D}; for n in $(seq 4); do python3 $D run --name grok-s11-a$n --brief /b.md & done`)).toEqual([])
+  expect(herdrCalls(`python3 $D run --name grok-x --brief /b.md`)).toEqual([])
+  expect(herdrCalls(`${D}; python3 $D run --name $NAME --brief /b.md`)).toEqual([])
+  expect(herdrCalls(`cat /x/delegate.py; python3 -m py_compile delegate.py`)).toEqual([])
+  expect(briefLine('# Fix login\n\nGoal: the login form drops the session cookie.\n')).toBe('Goal: the login form drops the session cookie.')
+  expect(briefLine('## Only a heading\n')).toBe('Only a heading')
+  expect(briefLine(undefined)).toBeUndefined()
 })
 
 const member = (patch: Partial<Member>): Member => ({ id: 'herdr:wN:p2', name: 'grok·p2', kind: 'herdr', engine: 'grok', role: '', state: 'idle', addedAt: 0, ...patch })

@@ -220,3 +220,43 @@ test('answering a y/n prompt in a shell pane wires no member; a helper loop over
   expect(drawn).toContain('grok·p2') // text to an agent's pane is still a handoff
   await ui.unmount()
 })
+
+test('a grok handed work through dstack delegate.py joins the team with its brief as role, and close ends it', async ($, on) => {
+  let now = NOW
+  on('clock.now', () => ({ value: now }) as never)
+  on('clock.every', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('ui.toast', () => ({ value: undefined }) as never)
+  let agents = ['grok-s11-a1', 'grok-s11-a2'].map((name, i) => ({ agent: 'grok', agent_status: 'working', pane_id: `wA:p${i + 5}`, name }))
+  on('process.run', (_, e) => ok((e as { argv: string[] }).argv[2] === 'read' ? '' : JSON.stringify({ result: { agents } })))
+  on('fs.read', (_, e) => ({ value: (e as { path: string }).path === '/s/brief-a1.md' ? '# Slice 1\n\nPort the login form to the new API.\n' : undefined }) as never)
+  on('tool.call', () => ({ result: 'ok', text: 'ok' }) as never)
+  const bash = (command: string) => $.tool.call({ tool: 'Bash', command, run_in_background: true } as never)
+  const draw = async () => {
+    const ui = await $.ui.mount({ plugin: 'teamwire', surface: 'terminal', component: 'Pane', requestId: 'teamwire', props: PROPS, viewport: { columns: 112, rows: 60 } } as never)
+    const drawn = JSON.stringify(await ui.drawn())
+    await ui.unmount()
+    return drawn
+  }
+  // The count in a dashboard tile (REPLY, DONE, …).
+  const tile = (drawn: string, key: string) => new RegExp(`"key":"${key}".*?"children":\\["(\\d+)"\\]`).exec(drawn)?.[1]
+
+  const D = 'D=/p/dstack/0.2.2/shared/scripts/delegate.py; S=/s'
+  await bash(`${D}; for n in 1 2; do python3 $D run --name grok-s11-a$n --brief $S/brief-a$n.md > $S/run-a$n.log 2>&1 & done; wait`)
+  const drawn = await draw()
+  expect(drawn).toContain('grok-s11-a1')
+  expect(drawn).toContain('grok-s11-a2')
+  expect(drawn).toContain('Port the login form to the new API.')
+  expect(drawn).toContain('delegate: grok-s11-a2') // brief not readable: the name stands in
+  expect(drawn).not.toContain('$n')
+
+  // a1 finishes; the lead reads its report file, not the pane, then closes the tab: DONE, not REPLY READY forever.
+  now += 60_000
+  agents = [{ ...agents[0]!, agent_status: 'idle' }, agents[1]!]
+  await bash(`python3 /p/dstack/0.2.2/shared/scripts/delegate.py wait --name grok-s11-a1 --report /s/a1.report.md`)
+  expect(tile(await draw(), 'REPLY')).toBe('1')
+  agents = agents.slice(1)
+  await bash(`python3 /p/dstack/0.2.2/shared/scripts/delegate.py close --name grok-s11-a1`)
+  const after = await draw()
+  expect([tile(after, 'REPLY'), tile(after, 'DONE')]).toEqual(['0', '1'])
+})

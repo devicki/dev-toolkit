@@ -1,5 +1,9 @@
 # teamwire 플러그인 변경 이력
 
+## 0.1.11
+- dstack `delegate.py`로 grok에 일을 맡기면 팀원이 하나도 안 잡히던 문제 수정: herdr 호출이 Python 안에서 일어나 명령에 `herdr`가 없었음. 이제 `delegate.py run`은 일 맡김(역할은 `--brief` 파일의 첫 줄, 못 읽으면 `delegate: <이름>`), `wait`는 기다림, `close`는 완료로 표시. 팀원 이름은 `--name`. `D=…/delegate.py; python3 $D …`처럼 명령 안에서 정한 변수와 `for n in 1 2 3 4`(또는 `{1..4}`) 반복문의 이름도 풀어서, 알 수 없는 이름(`$(…)`, 정하지 않은 변수)은 가짜 팀원을 만들지 않고 건너뜀
+- Bash를 `run_in_background`로 돌린 herdr 호출은 팀장을 기다림 상태로 두지 않음
+
 ## 0.1.10
 - 에이전트가 없는 셸 패널에 글자를 입력한 것(`herdr pane send-text wQ:p2 'n'`로 업그레이드 y/n 질문에 답하기)을 일 맡김으로 보고 팀원으로 연결하던 문제 수정: `pane send-text`/`pane run`은 `herdr agent list`에 에이전트가 있는 패널일 때만 팀원으로 연결
 

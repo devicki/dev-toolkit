@@ -7,8 +7,8 @@ export const STALE_MS = 5 * 60_000
 /** herdr may still report idle right after a prompt lands; trust it only after this. */
 const SETTLE_MS = 5000
 
-/** `prompt`/`send` hand over work; `keys` only presses keys (an approval, Enter); `read` takes the answer; `wait` holds the lead. */
-export type HerdrCall = { verb: 'prompt' | 'send' | 'keys' | 'read' | 'wait'; target: string; text?: string; wait: boolean }
+/** `prompt`/`send` hand over work; `keys` only presses keys (an approval, Enter); `read` takes the answer; `wait` holds the lead; `close` ends the member. */
+export type HerdrCall = { verb: 'prompt' | 'send' | 'keys' | 'read' | 'wait' | 'close'; target: string; text?: string; brief?: string; wait: boolean }
 
 const VERBS: Record<string, HerdrCall['verb']> = {
   'agent prompt': 'prompt',
@@ -22,6 +22,10 @@ const VERBS: Record<string, HerdrCall['verb']> = {
 }
 const VALUED = new Set(['--source', '--until', '--timeout', '--lines', '--machine', '--session', '--remote'])
 const SEP = '\u0000'
+/** dstack's `delegate.py` runs herdr from Python, so its own subcommands are the calls; every one names the agent in `--name`. */
+const DELEGATE = /(^|\/)delegate\.py$/
+const DELEGATE_VERBS: Record<string, HerdrCall['verb']> = { run: 'prompt', wait: 'wait', close: 'close' }
+const VAR = /\$\{?([A-Za-z_]\w*)\}?/g
 
 /** Shell-ish split: quotes group, `;`, `&`, `|` and newlines end a command. */
 export function words(cmd: string): string[] {
@@ -61,8 +65,11 @@ export function words(cmd: string): string[] {
  */
 export function herdrCalls(cmd: string): HerdrCall[] {
   const w = words(cmd)
+  const vars = shellVars(w)
   const calls: HerdrCall[] = []
   for (let i = 0; i < w.length; i++) {
+    // The script by its path (even `${CLAUDE_PLUGIN_ROOT}/…`), or a variable the command set to it (`D=…/delegate.py; python3 $D`).
+    if (DELEGATE.test(w[i]!) || subst(w[i]!, vars).some(x => DELEGATE.test(x))) calls.push(...delegateCall(w, i + 1, vars))
     if (!/(^|\/)herdr$/.test(w[i]!)) continue
     let j = i + 1
     while (w[j]?.startsWith('--')) j += VALUED.has(w[j]!) ? 2 : 1
@@ -80,6 +87,76 @@ export function herdrCalls(cmd: string): HerdrCall[] {
     if (pos[0]) calls.push({ verb, target: pos[0], ...(verb === 'prompt' || verb === 'send' ? { text: pos.slice(1).join(' ') } : {}), wait })
   }
   return calls
+}
+
+/**
+ * The variables a command sets itself: `X=value` at the start of a command, and the list of `for X in a b c` (or `{1..4}`).
+ * shortcut: a value built at runtime (`$(…)`, a glob) stays unknown, so a name that needs it is dropped rather than guessed.
+ */
+function shellVars(w: string[]): Map<string, string[]> {
+  const vars = new Map<string, string[]>()
+  for (let i = 0; i < w.length; i++) {
+    if (i > 0 && w[i - 1] !== SEP) continue
+    const a = /^([A-Za-z_]\w*)=(.*)$/.exec(w[i]!)
+    const v = a && subst(a[2]!, vars)
+    if (a && v?.length === 1 && !isVar(v[0]!)) vars.set(a[1]!, v)
+    if (w[i] !== 'for' || w[i + 2] !== 'in') continue
+    const list: string[] = []
+    for (let j = i + 3; j < w.length && w[j] !== SEP; j++) {
+      const r = /^\{(\d+)\.\.(\d+)\}$/.exec(w[j]!)
+      if (r) for (let n = +r[1]!; n <= +r[2]!; n++) list.push(String(n))
+      else list.push(w[j]!)
+    }
+    if (list.length && !list.some(x => isVar(x) || x.includes('*'))) vars.set(w[i + 1]!, list)
+  }
+  return vars
+}
+
+/** `word` with the command's own variables filled in, one result per loop value; empty when a variable is unknown. */
+function subst(word: string, vars: Map<string, string[]>): string[] {
+  let out = [word]
+  for (const m of word.matchAll(VAR)) {
+    const vals = vars.get(m[1]!)
+    if (!vals) return []
+    out = out.flatMap(o => vals.map(v => o.replace(m[0], v)))
+  }
+  return out
+}
+
+/** `delegate.py run|wait|close --name X …` from word `at`: one call per name, a loop's brief paired with its name. */
+function delegateCall(w: string[], at: number, vars: Map<string, string[]>): HerdrCall[] {
+  const verb = DELEGATE_VERBS[w[at] ?? '']
+  if (!verb) return []
+  const opt: Record<string, string> = {}
+  for (let j = at + 1; j < w.length && w[j] !== SEP; j++) {
+    const t = w[j]!
+    const eq = t.indexOf('=')
+    if (t.startsWith('--') && eq > 0) opt[t.slice(0, eq)] = t.slice(eq + 1)
+    else if (t.startsWith('--') && w[j + 1] !== undefined && w[j + 1] !== SEP) opt[t] = w[++j]!
+  }
+  const name = opt['--name'] ?? ''
+  const loop = [...name.matchAll(VAR)].map(m => m[1]!).find(v => (vars.get(v)?.length ?? 0) > 1)
+  const envs = loop ? vars.get(loop)!.map(x => new Map(vars).set(loop, [x])) : [vars]
+  return envs.flatMap(env =>
+    subst(name, env)
+      .filter(target => target && !isVar(target))
+      .map(target => {
+        const brief = subst(opt['--brief'] ?? '', env)[0]
+        return {
+          verb,
+          target,
+          ...(verb === 'prompt' ? { text: `delegate: ${target}`, ...(brief ? { brief } : {}) } : {}),
+          wait: verb !== 'close',
+        }
+      }),
+  )
+}
+
+/** A brief file's first line of prose (a heading only when there is nothing else), for a role. */
+export const briefLine = (file: unknown) => {
+  if (typeof file !== 'string') return
+  const lines = file.split('\n').map(l => l.trim()).filter(Boolean)
+  return lines.find(l => !l.startsWith('#')) ?? lines[0]?.replace(/^#+\s*/, '')
 }
 
 /** A target or text the shell fills in (`"$1"`, `$p`), which the command string cannot name. */
