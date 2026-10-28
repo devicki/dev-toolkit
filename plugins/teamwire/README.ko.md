@@ -38,7 +38,7 @@
 | 서브에이전트, agent teams 팀원 | `agent.spawn`, `$.agent.list()`, `session.send` / `session.receive`. 모델과 effort는 매 모델 요청(`turn.step`), 승인 대기는 `tool.check`, 도구 호출 수와 토큰은 `tool.call` / `turn.complete`에서 | 없음 |
 | 팀장 | `session.measure`(context, 비용), `turn.start` / `turn.complete` | 없음 |
 | 다른 Claude 세션 | 팀장의 SendMessage (`session.send`). 상태는 2초마다 각 세션의 상태 파일(`~/.claude/sessions/*.json`, 읽기만)에서: 작업 중, 승인·질문 대기, 대기, 종료 | 없음 |
-| herdr 패널의 CLI 에이전트 | 팀장이 실행한 `herdr agent prompt / send-keys / read / wait`, 또는 dstack의 `delegate.py run / wait / close`. 상태는 2초마다 `herdr agent list`, 모델은 에이전트 화면 하단에서 한 번 읽음 | [herdr](https://herdr.dev) |
+| herdr 패널의 CLI 에이전트 | 팀장이 실행한 `herdr agent prompt / send-keys / read / wait`, 또는 dstack의 `delegate.py run / wait / close`. 상태는 2초마다 `herdr agent list`, 모델은 에이전트 화면 하단에서 한 번 읽음. grok이 직접 부른 서브에이전트는 grok 세션 파일(`~/.grok/sessions/…/subagents/*/meta.json`)에서 읽어 팀원으로 추가하며, 세션 id는 herdr의 grok 연동이 알려 줌 | [herdr](https://herdr.dev) |
 
 herdr가 없으면 외부 CLI 팀원만 빼고 모두 동작합니다.
 
@@ -57,7 +57,7 @@ herdr가 없으면 외부 CLI 팀원만 빼고 모두 동작합니다.
 - 단축키(`c`, `l`, `1`~`9`)는 패널에 포커스가 있을 때 동작합니다. 패널을 클릭하거나 ctrl+x tab.
 - 패널이 자동으로 열리려면 터미널 폭이 144칸 이상이어야 합니다(한 번 직접 연 뒤에는 110칸).
 - 패널이 낮으면 대시보드와 배선도를 남기고 COMMS, ACTIVITY, FOCUS 순으로 뺍니다. 뺀 섹션은 단축키 옆 한 줄에 적습니다(`+ ACTIVITY 6 · COMMS 3 hidden`). 패널을 키우면 다시 보입니다. 긴 문장은 패널 끝에서 `…`로 자르고, 맡긴 일 전체는 FOCUS에서 봅니다.
-- 모드는 Claude Code 안에서 사용자 권한으로 실행되며 샌드박스가 없습니다. teamwire가 실행하는 명령은 `herdr`뿐이고, 파일은 쓰지 않습니다. 읽는 파일은 다른 세션의 상태 파일과 dstack 위임의 brief 파일뿐입니다.
+- 모드는 Claude Code 안에서 사용자 권한으로 실행되며 샌드박스가 없습니다. teamwire가 실행하는 명령은 `herdr`뿐이고, 파일은 쓰지 않습니다. 읽는 파일은 다른 세션의 상태 파일, dstack 위임의 brief 파일, grok의 서브에이전트 기록뿐입니다.
 - 조직이 관리하는 Claude Code에서는 직접 설치한 플러그인에 이 이벤트들이 전달되지 않을 수 있습니다.
 - 알려진 한계: 변수로 대상을 받는 herdr 호출(셸 함수, 반복문)은 명령에 적힌 패널 번호로 팀원을 찾으며, 파일에서 불러온 스크립트 안의 호출은 감지하지 못합니다. CLI 모델은 지금의 화면 하단 문구를 기준으로 읽습니다. 다른 세션의 상태는 Claude Code 내부 상태 파일에서 읽으므로, 그 형식이 바뀌면 해당 팀원은 마지막 상태에 머뭅니다. 팀원끼리 주고받는 메시지는 별도 선 없이 양쪽 선이 함께 반짝입니다.
 

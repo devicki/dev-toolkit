@@ -5,7 +5,7 @@ export type MemberState = 'working' | 'reply' | 'blocked' | 'idle' | 'done' | 'f
 export type Dir = 'out' | 'in'
 
 export type Member = {
-  /** agentId for Claude agents, `herdr:<target>` for herdr panes, `peer:<to>` for other sessions. */
+  /** agentId for Claude agents, `herdr:<target>` for herdr panes, `peer:<to>` for other sessions, `grok:<subagent id>` for a grok member's own subagents. */
   id: string
   name: string
   kind: 'subagent' | 'teammate' | 'herdr' | 'peer'

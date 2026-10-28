@@ -38,7 +38,7 @@
 | 子代理、隊友 | `agent.spawn`、`$.agent.list()`、`session.send` / `session.receive`；模型與 effort 來自每次模型請求（`turn.step`），核准等待來自 `tool.check`，工具呼叫次數與 token 來自 `tool.call` / `turn.complete` | 無 |
 | 領導 | `session.measure`（上下文視窗、費用）、`turn.start` / `turn.complete` | 無 |
 | 其他 Claude 工作階段 | 領導的 SendMessage（`session.send`）；狀態每 2 秒從各工作階段的狀態檔（`~/.claude/sessions/*.json`，只讀取）取得：工作中、等待核准或回答、閒置、已結束 | 無 |
-| herdr 面板中的 CLI 代理 | 領導執行的 `herdr agent prompt / send-keys / read / wait`，或 dstack 的 `delegate.py run / wait / close`；狀態每 2 秒從 `herdr agent list` 取得；模型從代理畫面底部讀取一次 | [herdr](https://herdr.dev) |
+| herdr 面板中的 CLI 代理 | 領導執行的 `herdr agent prompt / send-keys / read / wait`，或 dstack 的 `delegate.py run / wait / close`；狀態每 2 秒從 `herdr agent list` 取得；模型從代理畫面底部讀取一次；grok 自己呼叫的子代理從 grok 的工作階段檔（`~/.grok/sessions/…/subagents/*/meta.json`）讀取並加為成員，工作階段 ID 由 herdr 的 grok 整合提供 | [herdr](https://herdr.dev) |
 
 沒有 herdr 時，除了外部 CLI 代理之外都能運作。
 
@@ -57,7 +57,7 @@
 - 按鍵（`c`、`l`、`1`–`9`）在面板取得焦點時才有作用：點一下面板，或按 ctrl+x tab。
 - 只有在終端機寬度達 144 欄以上時，面板才會自動開啟（手動開過一次後為 110 欄）。
 - 面板高度不夠時，會保留儀表板與配線圖，依序省略 COMMS、ACTIVITY、FOCUS；省略的區段會寫在按鍵旁的一行（`+ ACTIVITY 6 · COMMS 3 hidden`）。把面板拉高就會顯示。過長的文字會在面板邊緣以 `…` 截斷，完整的工作內容可在 FOCUS 中查看。
-- mod 以你的使用者權限在 Claude Code 內執行，沒有沙箱。teamwire 只執行 `herdr` 指令，不寫入任何檔案；只讀取其他工作階段的狀態檔與 dstack 委派的 brief 檔。
+- mod 以你的使用者權限在 Claude Code 內執行，沒有沙箱。teamwire 只執行 `herdr` 指令，不寫入任何檔案；只讀取其他工作階段的狀態檔、dstack 委派的 brief 檔與 grok 的子代理紀錄。
 - 在由組織管理的 Claude Code 中，自行安裝的外掛可能收不到這些事件。
 - 已知限制：以變數接收目標的 herdr 呼叫（shell 函式或迴圈）會依指令中寫出的窗格編號找到成員，從檔案載入的腳本內的呼叫則無法偵測；CLI 模型是依目前畫面底部的文字讀取；其他工作階段的狀態來自 Claude Code 內部的狀態檔，若該格式改變，這類成員會停在最後的狀態；成員之間的訊息不會畫出專屬的線，而是讓兩條線一起閃爍。
 

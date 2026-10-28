@@ -36,7 +36,7 @@ Each kind of member hangs on its own wire:
 | Subagents, teammates | `agent.spawn`, `$.agent.list()`, `session.send` / `session.receive`; model and effort from each model request (`turn.step`); approvals from `tool.check`; tool calls and tokens from `tool.call` / `turn.complete` | nothing |
 | The lead | `session.measure` (context window, cost), `turn.start` / `turn.complete` | nothing |
 | Other Claude sessions | the lead's SendMessage (`session.send`); state from each session's status file (`~/.claude/sessions/*.json`, read only) every 2 s: busy, waiting on an approval or a question, idle, ended | nothing |
-| CLI agents in herdr panes | the lead's `herdr agent prompt / send-keys / read / wait` commands, or dstack's `delegate.py run / wait / close`; state from `herdr agent list` every 2 s; model read once from the agent's footer | [herdr](https://herdr.dev) |
+| CLI agents in herdr panes | the lead's `herdr agent prompt / send-keys / read / wait` commands, or dstack's `delegate.py run / wait / close`; state from `herdr agent list` every 2 s; model read once from the agent's footer. A grok's own subagents join from grok's session files (`~/.grok/sessions/…/subagents/*/meta.json`), found by the session id herdr's grok integration reports | [herdr](https://herdr.dev) |
 
 Without herdr, everything but the external CLI agents works.
 
@@ -55,7 +55,7 @@ The pane opens by itself on the first handoff. Close it and it stays closed for 
 - Press keys (`c`, `l`, `1`–`9`) reach the pane once it holds the focus: click it, or ctrl+x tab.
 - The pane opens unasked only on a terminal 144 columns or wider (110 once you have opened it).
 - A short pane keeps the dashboard and the diagram and drops COMMS, then ACTIVITY, then FOCUS; a line beside the keys names what it left out (`+ ACTIVITY 6 · COMMS 3 hidden`). A taller pane shows them. Long text is cut with `…` at the pane's edge; FOCUS shows a member's full task.
-- A mod runs inside Claude Code with your user permissions. It has no sandbox. teamwire runs the `herdr` command and nothing else, and writes no files; it reads only other sessions' status files and the brief files of dstack delegations.
+- A mod runs inside Claude Code with your user permissions. It has no sandbox. teamwire runs the `herdr` command and nothing else, and writes no files; it reads only other sessions' status files, the brief files of dstack delegations, and grok's subagent records.
 - Under an organization-managed Claude Code, plugins you install yourself may not receive these events.
 - Known limits: a herdr call that takes its pane from a variable (a shell helper or loop) finds its members by the pane ids the command spells out, and calls inside a sourced script are not detected; the CLI model is read from footers as they look today; another session's state comes from Claude Code's internal status file, so a change to that file would leave such members at their last state; messages between two members flash both wires instead of drawing a wire of their own.
 

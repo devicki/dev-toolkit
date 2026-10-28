@@ -274,6 +274,13 @@ export function modelOnScreen(screen: string): string | undefined {
 /** A Claude model id as a short label: `claude-haiku-5-5` → `haiku 5.5`. */
 export const shortModel = (m: string) => m.replace(/^claude-/, '').replace(/\[.*\]$/, '').replace(/-(\d+)-(\d+).*$/, ' $1.$2')
 
+/** One of a grok's own subagents, as grok writes it to `<session>/subagents/<id>/meta.json`. */
+export type GrokSub = { subagent_id: string; description?: string; prompt?: string; subagent_type?: string; status?: string; started_at?: string; tool_calls?: number; effective_model_id?: string }
+
+/** A grok subagent's status as a member state; a status not seen yet (only `running` and `completed` were) counts as still at work. */
+export const fromGrokSub = (status = ''): MemberState =>
+  status === 'completed' ? 'done' : /cancel|fail|error|abort|timeout|timed_out|killed/.test(status) ? 'failed' : 'working'
+
 /** herdr's agent_status folded into a member's state. */
 export function fromHerdr(m: Member, status: string | undefined, now: number): MemberState {
   if (status === undefined) {

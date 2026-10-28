@@ -2,6 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Beat, Lead, Link, Member, MemberState, Msg } from '../types'
+import type { GrokSub } from './model'
 import {
   ago,
   briefLine,
@@ -15,6 +16,7 @@ import {
   find,
   flowOf,
   fromAgent,
+  fromGrokSub,
   fromHerdr,
   fromSession,
   expandCalls,
@@ -88,7 +90,7 @@ const WIRE: Record<Member['kind'], { live: string; idle: string }> = {
   peer: { live: '┉', idle: '┈' },
 }
 
-type HerdrAgent = { agent: string; agent_status: string; pane_id: string; name?: string }
+type HerdrAgent = { agent: string; agent_status: string; pane_id: string; name?: string; cwd?: string; agent_session?: { value?: string } }
 
 // Last model·effort seen per loop ('' the lead's), so a model request writes state only on a change.
 const seen = new Map<string, string>()
@@ -246,6 +248,54 @@ const pollHerdr = async ($: EngineInterface) => {
       return { ...m, state, name, engine, model, owed, ...(pane ? { pane } : {}), ...(m.state === 'working' && state === 'reply' ? surge('in', now) : {}) }
     }),
   )
+  await pollGrokSubs($, agents)
+}
+
+/**
+ * A grok member's own subagents join the team as members of their own, the way a Claude subagent's subagent does.
+ * grok writes each to `<GROK_HOME>/sessions/<cwd, URL-encoded>/<session>/subagents/<id>/meta.json` from spawn to end;
+ * herdr's grok hook reports the session id.
+ */
+const pollGrokSubs = async ($: EngineInterface, agents: HerdrAgent[]) => {
+  const home = (await $.env.get('GROK_HOME')) || `${await $.env.get('HOME')}/.grok`
+  for (const m of await read($, membersAtom)) {
+    const a = m.kind === 'herdr' && m.engine === 'grok' ? agents.find(x => x.pane_id === m.pane) : undefined
+    const session = a?.agent_session?.value
+    if (!a?.cwd || !session) continue
+    const dir = `${home}/sessions/${encodeURIComponent(a.cwd)}/${session}/subagents`
+    const entries = await $.fs.list(dir).catch(() => undefined)
+    for (const { name: child } of entries ?? []) {
+      const id = `grok:${child}`
+      const known = (await read($, membersAtom)).find(x => x.id === id)
+      if (known && (known.state === 'done' || known.state === 'failed')) continue
+      let sub: GrokSub
+      try {
+        sub = JSON.parse((await $.fs.read(`${dir}/${child}/meta.json`)) as string) as GrokSub
+      } catch {
+        continue // grok writing the file
+      }
+      // A reused grok keeps the subagents of earlier work; only those since this lead's handoff are its team.
+      if (!known && m.sentAt !== undefined && Date.parse(sub.started_at ?? '') < m.sentAt) continue
+      const state = fromGrokSub(sub.status)
+      const fields = { state, ...(sub.tool_calls !== undefined ? { tools: sub.tool_calls } : {}) }
+      if (known) {
+        if (known.state !== state || known.tools !== fields.tools) await patch($, id, x => ({ ...x, ...fields }))
+        continue
+      }
+      const now = await $.clock.now()
+      await wire($, id, {
+        name: oneLine(sub.description || 'subagent', 24),
+        kind: 'subagent',
+        engine: 'grok',
+        role: oneLine(sub.prompt || sub.description || '', 400),
+        ...fields,
+        ...(sub.effective_model_id ? { model: shortModel(sub.effective_model_id) } : {}),
+        ...surge('out', now),
+      })
+      await note($, m.id, id, sub.description || 'subagent')
+      await linkUp($, m.id, id)
+    }
+  }
 }
 
 const pollSessions = async ($: EngineInterface) => {

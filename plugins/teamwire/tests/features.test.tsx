@@ -263,3 +263,51 @@ test('a grok handed work through dstack delegate.py joins the team with its brie
   const after = await draw()
   expect([tile(after, 'REPLY'), tile(after, 'DONE')]).toEqual(['0', '1'])
 })
+
+test("a grok member's own subagents join the team from grok's session files, and finish there", async ($, on) => {
+  let now = NOW
+  on('clock.now', () => ({ value: now }) as never)
+  on('clock.every', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('ui.toast', () => ({ value: undefined }) as never)
+  on('env.get', (_, e) => ({ value: (e as { name: string }).name === 'HOME' ? '/home/me' : undefined }) as never)
+  const agents = [{ agent: 'grok', agent_status: 'working', pane_id: 'wA:p5', name: 'ai-fe', cwd: '/w/app', agent_session: { value: 's1' } }]
+  on('process.run', (_, e) => ok((e as { argv: string[] }).argv[2] === 'read' ? '' : JSON.stringify({ result: { agents } })))
+  const dir = '/home/me/.grok/sessions/%2Fw%2Fapp/s1/subagents'
+  const at = (ms: number) => new Date(ms).toISOString()
+  const metas: Record<string, object> = {
+    // From an earlier task in the same grok: not this lead's.
+    old: { subagent_id: 'old', description: 'Earlier work', status: 'completed', started_at: at(NOW - 60_000) },
+    c1: { subagent_id: 'c1', description: 'How: agent install UI', prompt: 'Trace the install page.', subagent_type: 'general-purpose', status: 'running', started_at: at(NOW + 1000), effective_model_id: 'grok-4.7' },
+  }
+  const listed: string[] = []
+  on('fs.list', (_, e) => ({ value: (e as { path: string }).path === dir ? listed.map(name => ({ name, kind: 'dir', size: 0, mtimeMs: 0, isLink: false })) : [] }) as never)
+  on('fs.read', (_, e) => {
+    const m = /subagents\/(\w+)\/meta\.json$/.exec((e as { path: string }).path)
+    return { value: m ? JSON.stringify(metas[m[1]!]) : undefined } as never
+  })
+  on('tool.call', () => ({ result: 'ok', text: 'ok' }) as never)
+  const draw = async () => {
+    const ui = await $.ui.mount({ plugin: 'teamwire', surface: 'terminal', component: 'Pane', requestId: 'teamwire', props: PROPS, viewport: { columns: 112, rows: 60 } } as never)
+    const drawn = JSON.stringify(await ui.drawn())
+    await ui.unmount()
+    return drawn
+  }
+  const tile = (drawn: string, key: string) => new RegExp(`"key":"${key}".*?"children":\\["(\\d+)"\\]`).exec(drawn)?.[1]
+
+  await $.tool.call({ tool: 'Bash', command: `herdr agent prompt ai-fe "Build the install screen"` } as never)
+  listed.push('old', 'c1')
+  now += 2000
+  await $.tool.call({ tool: 'Bash', command: `herdr agent read ai-fe` } as never) // any herdr call polls
+  let drawn = await draw()
+  expect(drawn).toContain('How: agent install UI')
+  expect(drawn).not.toContain('Earlier work')
+  expect(tile(drawn, 'TEAM')).toBe('2')
+  expect(tile(drawn, 'WORKING')).toBe('2')
+
+  metas.c1 = { ...metas.c1, status: 'completed', tool_calls: 3 }
+  now += 2000
+  await $.tool.call({ tool: 'Bash', command: `herdr agent read ai-fe` } as never)
+  drawn = await draw()
+  expect(tile(drawn, 'DONE')).toBe('1')
+})
