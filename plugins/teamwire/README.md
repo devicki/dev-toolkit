@@ -36,7 +36,7 @@ Each kind of member hangs on its own wire:
 | Subagents, teammates | `agent.spawn`, `$.agent.list()`, `session.send` / `session.receive`; model and effort from each model request (`turn.step`); approvals from `tool.check`; tool calls and tokens from `tool.call` / `turn.complete` | nothing |
 | The lead | `session.measure` (context window, cost), `turn.start` / `turn.complete` | nothing |
 | Other Claude sessions | the lead's SendMessage (`session.send`); state from each session's status file (`~/.claude/sessions/*.json`, read only) every 2 s: busy, waiting on an approval or a question, idle, ended | nothing |
-| CLI agents in herdr panes | the lead's `herdr agent prompt / send-keys / read / wait` commands, or dstack's `delegate.py run / wait / close`; state from `herdr agent list` every 2 s; model read once from the agent's footer. A grok's own subagents join from grok's session files (`~/.grok/sessions/…/subagents/*/meta.json`), found by the session id herdr's grok integration reports | [herdr](https://herdr.dev) |
+| CLI agents in herdr panes | the lead's `herdr agent prompt / send-keys / read / wait` commands, or dstack's `delegate.py run / wait / close`; state from `herdr agent list` every 2 s; model read once from the agent's footer. A grok's own subagents hang under that grok, read from grok's session files (`~/.grok/sessions/…/subagents/*/meta.json`), found by the session id herdr's grok integration reports | [herdr](https://herdr.dev) |
 
 Without herdr, everything but the external CLI agents works.
 

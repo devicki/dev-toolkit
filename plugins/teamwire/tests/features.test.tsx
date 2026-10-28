@@ -1,8 +1,22 @@
 import { expect, test } from 'claude-code/testing'
+import { cells } from '../hooks/model'
 
 const NOW = Date.parse('2026-10-15T09:00:00Z')
 const PROPS = { title: 'Team', isFocused: true, bodyColumns: 110, placement: 'dock', scroll: { offset: 0, bodyRows: 60 }, view: {} }
 const ok = (stdout: string) => ({ value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }) as never
+type Node = string | { props?: { key?: string }; children?: Node[] }
+const flat = (n: Node): string => (typeof n === 'string' ? n : (n.children ?? []).map(flat).join(''))
+/** The ORCHESTRATION section as text, one string per row. */
+const rows = (n: Node): string[] => {
+  if (typeof n === 'string') return []
+  const kids = n.children ?? []
+  if (kids[0] !== undefined && flat(kids[0]).startsWith('ORCHESTRATION')) return kids.map(flat)
+  for (const c of kids) {
+    const r = rows(c)
+    if (r.length) return r
+  }
+  return []
+}
 const herdr = (status: string) => JSON.stringify({ result: { agents: [{ agent: 'grok', agent_status: status, pane_id: 'wN:p2' }] } })
 
 test('the moments not to miss: a member that needs you raises a toast and a notification', async ($, on) => {
@@ -230,7 +244,8 @@ test('a grok handed work through dstack delegate.py joins the team with its brie
   // delegate.py runs in the background: right after the call, its groks are not in herdr's list yet.
   let agents: { agent: string; agent_status: string; pane_id: string; name: string }[] = []
   on('process.run', (_, e) => ok((e as { argv: string[] }).argv[2] === 'read' ? '' : JSON.stringify({ result: { agents } })))
-  on('fs.read', (_, e) => ({ value: (e as { path: string }).path === '/s/brief-a1.md' ? '# Slice 1\n\nPort the login form to the new API.\n' : undefined }) as never)
+  const files: Record<string, string> = { '/s/brief-a1.md': '# Slice 1\n\nPort the login form to the new API.\n' }
+  on('fs.read', (_, e) => ({ value: files[(e as { path: string }).path] }) as never)
   on('tool.call', () => ({ result: 'ok', text: 'ok' }) as never)
   const bash = (command: string) => $.tool.call({ tool: 'Bash', command, run_in_background: true } as never)
   const draw = async () => {
@@ -251,7 +266,12 @@ test('a grok handed work through dstack delegate.py joins the team with its brie
   expect(drawn).toContain('delegate: grok-s11-a2') // brief not readable: the name stands in
   expect(drawn).not.toContain('$n')
   expect(tile(drawn, 'WORKING')).toBe('2')
+  // a2's brief is written by the command itself, after the hook ran: the next poll reads it.
+  files['/s/brief-a2.md'] = 'Port the signup form.\n'
   agents = ['grok-s11-a1', 'grok-s11-a2'].map((name, i) => ({ agent: 'grok', agent_status: 'working', pane_id: `wA:p${i + 5}`, name }))
+
+  await bash(`python3 /p/dstack/0.2.2/shared/scripts/delegate.py wait --name grok-s11-a2 --report /s/a2.report.md`)
+  expect(await draw()).toContain('Port the signup form.')
 
   // a1 finishes; the lead reads its report file, not the pane, then closes the tab: DONE, not REPLY READY forever.
   now += 60_000
@@ -302,6 +322,23 @@ test("a grok member's own subagents join the team from grok's session files, and
   let drawn = await draw()
   expect(drawn).toContain('How: agent install UI')
   expect(drawn).not.toContain('Earlier work')
+  // The subagent hangs off its grok's wire (a guide down from the grok, a ╰ corner), not off the lead's trunk.
+  const ui = await $.ui.mount({ plugin: 'teamwire', surface: 'terminal', component: 'Pane', requestId: 'teamwire', props: PROPS, viewport: { columns: 112, rows: 60 } } as never)
+  const lines = rows((await ui.drawn()) as Node)
+  await ui.unmount()
+  const row = lines.findIndex(l => l.includes('How: agent'))
+  expect(lines[row]!.slice(15)).toMatch(/^ {2}╰/)
+  expect(lines[row]).not.toContain('◀')
+  expect(lines.findIndex(l => l.includes('ai-fe'))).toBe(row - 3)
+  expect(lines[row - 2]!.slice(15)).toMatch(/^ {2}│/)
+  // A narrow pane keeps the tree and runs no row past its width.
+  const thin = await $.ui.mount({ plugin: 'teamwire', surface: 'terminal', component: 'Pane', requestId: 'teamwire', props: { ...PROPS, bodyColumns: 50 }, viewport: { columns: 52, rows: 60 } } as never)
+  const narrow = rows((await thin.drawn()) as Node)
+  await thin.unmount()
+  const kid = narrow.findIndex(l => l.includes('How:'))
+  expect(narrow[kid]!.slice(15)).toMatch(/^ {2}╰/)
+  expect(narrow[kid - 2]!.slice(15)).toMatch(/^ {2}│/)
+  expect(Math.max(...narrow.slice(1).map(l => cells(l)))).toBeLessThanOrEqual(50)
   expect(tile(drawn, 'TEAM')).toBe('2')
   expect(tile(drawn, 'WORKING')).toBe('2')
 

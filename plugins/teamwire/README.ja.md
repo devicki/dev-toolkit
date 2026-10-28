@@ -38,7 +38,7 @@
 | サブエージェント、チームメイト | `agent.spawn`、`$.agent.list()`、`session.send` / `session.receive`。モデルと effort は毎回のモデルリクエスト（`turn.step`）、承認待ちは `tool.check`、ツール呼び出し数とトークンは `tool.call` / `turn.complete` から | なし |
 | リード | `session.measure`（コンテキストウィンドウ、費用）、`turn.start` / `turn.complete` | なし |
 | ほかの Claude セッション | リードの SendMessage（`session.send`）。状態は 2 秒ごとに各セッションの状態ファイル（`~/.claude/sessions/*.json`、読むだけ）から: 作業中、承認・質問待ち、待機、終了 | なし |
-| herdr ペインの CLI エージェント | リードが実行した `herdr agent prompt / send-keys / read / wait`、または dstack の `delegate.py run / wait / close`。状態は 2 秒ごとに `herdr agent list`、モデルはエージェント画面のフッターから一度だけ読み取り。grok が自分で呼んだサブエージェントは grok のセッションファイル（`~/.grok/sessions/…/subagents/*/meta.json`）から読んでメンバーに加える。セッション ID は herdr の grok 連携が知らせる | [herdr](https://herdr.dev) |
+| herdr ペインの CLI エージェント | リードが実行した `herdr agent prompt / send-keys / read / wait`、または dstack の `delegate.py run / wait / close`。状態は 2 秒ごとに `herdr agent list`、モデルはエージェント画面のフッターから一度だけ読み取り。grok が自分で呼んだサブエージェントは grok のセッションファイル（`~/.grok/sessions/…/subagents/*/meta.json`）から読んで、その grok の下にぶら下げる。セッション ID は herdr の grok 連携が知らせる | [herdr](https://herdr.dev) |
 
 herdr がなくても、外部の CLI エージェント以外はすべて動きます。
 

@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import type { Member } from '../types'
-import { briefLine, busyCount, fromGrokSub, cells, fitRow, shineAt, shineRuns, fromSession, sessionFor, oneLine, padCells, chronicle, dur, fanout, gauge, isStale, kTokens, STALE_MS, flowOf, expandCalls, fromHerdr, herdrCalls, modelOnScreen, runs, shortModel, wireCells, wrapCells } from '../hooks/model'
+import { briefLine, busyCount, fromGrokSub, nest, cells, fitRow, shineAt, shineRuns, fromSession, sessionFor, oneLine, padCells, chronicle, dur, fanout, gauge, isStale, kTokens, STALE_MS, flowOf, expandCalls, fromHerdr, herdrCalls, modelOnScreen, runs, shortModel, wireCells, wrapCells } from '../hooks/model'
 
 test('herdrCalls finds who the lead talks to, through quotes, options and chains', async () => {
   expect(herdrCalls(`herdr agent prompt wN:p2 "Review the diff; report \\"only\\" bugs" --wait --timeout 120000`)).toEqual([
@@ -67,8 +67,26 @@ test('dstack delegate.py calls are herdr calls: run prompts and waits, wait wait
   expect(briefLine(undefined)).toBeUndefined()
 })
 
-test("a grok subagent's status: running works, completed is done, a cancel or failure failed, an unknown status still works", async () => {
-  expect(['running', 'completed', 'cancelled', 'failed', 'timed_out', 'queued', undefined].map(s => fromGrokSub(s))).toEqual(['working', 'done', 'failed', 'failed', 'failed', 'working', 'working'])
+test("a grok subagent's status: running works, completed is done, cancelled or any error failed, an unknown status still works", async () => {
+  expect(['running', 'completed', 'cancelled', 'failed', 'timed_out', 'queued', undefined].map(status => fromGrokSub({ status }))).toEqual(['working', 'done', 'failed', 'failed', 'failed', 'working', 'working'])
+  // As grok wrote them: a cancel carries an error; a subagent whose command exited 3 still completed.
+  expect(fromGrokSub({ status: 'cancelled', error: 'Subagent was cancelled' })).toBe('failed')
+  expect(fromGrokSub({ status: 'stopped', error: 'model unavailable' })).toBe('failed')
+  expect(fromGrokSub({ status: 'completed' })).toBe('done')
+})
+
+test('a grok and its subagents: children follow their parent, the trunk branches only to the lead\'s own members', async () => {
+  const m = (id: string, parent?: string) => member({ id, name: id, ...(parent ? { parent } : {}) })
+  expect(nest([m('g1'), m('a'), m('s1', 'g1'), m('s2', 'g1'), m('orphan', 'gone')]).map(x => x.id)).toEqual(['g1', 's1', 's2', 'a', 'orphan'])
+  // g1, s1, s2, a: the trunk runs from g1's row (1) to a's (10) and branches at both; s1 (4) and s2 (7) only pass.
+  const fan = fanout(4, [true, false, false, true])
+  expect([1, 4, 6, 7, 10].map(fan.trunk)).toEqual(['╭', '│', '┤', '│', '╰'])
+  expect(fan.lead).toBe(6)
+  // One top member with children: a straight line to it, nothing to the children.
+  const one = fanout(3, [true, false, false])
+  expect([one.lead, one.trunk(1), one.trunk(4)]).toEqual([1, '─', ' '])
+  // No branch list: the old fan.
+  expect([fanout(3).lead, fanout(3).trunk(1), fanout(3).trunk(4), fanout(3).trunk(7)]).toEqual([4, '╭', '┼', '╰'])
 })
 
 const member = (patch: Partial<Member>): Member => ({ id: 'herdr:wN:p2', name: 'grok·p2', kind: 'herdr', engine: 'grok', role: '', state: 'idle', addedAt: 0, ...patch })

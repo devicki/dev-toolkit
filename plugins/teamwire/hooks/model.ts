@@ -295,11 +295,21 @@ export function modelOnScreen(screen: string): string | undefined {
 export const shortModel = (m: string) => m.replace(/^claude-/, '').replace(/\[.*\]$/, '').replace(/-(\d+)-(\d+).*$/, ' $1.$2')
 
 /** One of a grok's own subagents, as grok writes it to `<session>/subagents/<id>/meta.json`. */
-export type GrokSub = { subagent_id: string; description?: string; prompt?: string; subagent_type?: string; status?: string; started_at?: string; tool_calls?: number; effective_model_id?: string }
+export type GrokSub = { subagent_id: string; description?: string; prompt?: string; subagent_type?: string; status?: string; error?: string; started_at?: string; tool_calls?: number; effective_model_id?: string }
 
-/** A grok subagent's status as a member state; a status not seen yet (only `running` and `completed` were) counts as still at work. */
-export const fromGrokSub = (status = ''): MemberState =>
-  status === 'completed' ? 'done' : /cancel|fail|error|abort|timeout|timed_out|killed/.test(status) ? 'failed' : 'working'
+/**
+ * A grok subagent's status as a member state. Seen: `running`, `completed` (also when a command it ran failed),
+ * `cancelled` with `error: "Subagent was cancelled"`. Any other ending that carries an error failed; anything else is still at work (a queued one too).
+ */
+export const fromGrokSub = (s: Pick<GrokSub, 'status' | 'error'>): MemberState =>
+  s.status === 'completed' ? 'done' : s.error || /cancel|fail|error|abort|timeout|timed_out|killed/.test(s.status ?? '') ? 'failed' : 'working'
+
+/** The roster in drawing order: each member, then the members it spawned. A child whose parent is gone stands on its own. */
+export function nest(list: Member[]): Member[] {
+  const ids = new Set(list.map(m => m.id))
+  const top = list.filter(m => !m.parent || !ids.has(m.parent))
+  return top.flatMap(m => [m, ...list.filter(c => c.parent === m.id)])
+}
 
 /** herdr's agent_status folded into a member's state. */
 export function fromHerdr(m: Member, status: string | undefined, now: number): MemberState {
@@ -471,17 +481,20 @@ export function chronicle(before: Member[], after: Member[], now: number, msgs: 
 export const busyCount = (list: Member[]) => list.filter(m => m.state === 'working' || m.state === 'blocked').length
 
 /**
- * The fan of wires out of the lead: member k branches off a rounded trunk on row 1 + 3k (its two info rows below),
- * and the lead's connector meets the trunk midway, so the lead sits at the centre of its team.
+ * The fan of wires out of the lead: member k sits on row 1 + 3k (its two info rows below) and, when `branch[k]` is not false,
+ * branches off a rounded trunk; the lead's connector meets the trunk midway, so the lead sits at the centre of its team.
+ * A member's own child (`branch[k] === false`) hangs off its parent instead, and the trunk passes it by.
  */
-export function fanout(n: number): { lead: number; rows: number; trunk: (r: number) => string } {
-  const last = 1 + 3 * (n - 1)
-  const lead = n === 1 ? 1 : 1 + Math.round(1.5 * (n - 1))
+export function fanout(n: number, branch: boolean[] = []): { lead: number; rows: number; trunk: (r: number) => string } {
+  const ks = [...Array(n).keys()].filter(k => branch[k] !== false)
+  const first = 1 + 3 * (ks[0] ?? 0)
+  const last = 1 + 3 * (ks[ks.length - 1] ?? 0)
+  const lead = Math.round((first + last) / 2)
   const trunk = (r: number) => {
-    if (n === 1) return r === 1 ? '─' : ' '
-    if (r < 1 || r > last) return ' '
-    const branch = (r - 1) % 3 === 0
-    if (r === 1) return '╭'
+    if (ks.length <= 1) return r === first ? '─' : ' '
+    if (r < first || r > last) return ' '
+    const branch = (r - 1) % 3 === 0 && ks.includes((r - 1) / 3)
+    if (r === first) return '╭'
     if (r === last) return '╰'
     if (r === lead) return branch ? '┼' : '┤'
     return branch ? '├' : '│'

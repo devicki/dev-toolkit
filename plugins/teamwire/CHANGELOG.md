@@ -1,5 +1,10 @@
 # teamwire 플러그인 변경 이력
 
+## 0.1.15
+- grok의 서브에이전트를 팀장의 팀원처럼 팀장 줄기에 연결하던 표시를 고침: 이제 부모 grok 바로 아래에 붙고, 부모의 선에서 `├┄▶` / `╰┄▶`로 갈라져 나옴. 팀장 줄기는 팀장이 직접 맡긴 팀원에게만 갈라짐. 부모가 지워진 서브에이전트는 따로 섬
+- grok 서브에이전트 상태를 실제 기록에 맞춤: `cancelled`(`error: "Subagent was cancelled"`)와 `error`가 있는 종료는 FAILED. 서브에이전트가 실행한 명령이 실패해도 grok은 `completed`로 기록하므로 DONE
+- 같은 명령 안에서 만든 brief(here-document)를 훅이 먼저 읽어 역할이 `delegate: <이름>`으로 남던 문제 수정: 못 읽은 brief는 2초마다 다시 읽어 역할을 채움
+
 ## 0.1.14
 - 한 명령 안에서 brief를 here-document로 쓰고(`cat > f <<'EOF' … EOF`) 바로 `delegate.py run`이나 `herdr agent prompt`를 실행하면 팀원이 안 잡히던 문제 수정(0.1.13 실사용 확인에서 발견): 본문의 작은따옴표(`lead's`)가 따옴표 시작으로 읽혀 뒤의 명령까지 삼켰음. 이제 명령을 나누기 전에 here-document 본문을 빼고 읽음
 
