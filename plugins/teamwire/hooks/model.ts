@@ -29,8 +29,28 @@ const DELEGATE = /(^|\/)delegate\.py$/
 const DELEGATE_VERBS: Record<string, HerdrCall['verb']> = { run: 'prompt', wait: 'wait', close: 'close' }
 const VAR = /\$\{?([A-Za-z_]\w*)\}?/g
 
-/** Shell-ish split: quotes group, `;`, `&`, `|` and newlines end a command. */
+/**
+ * `cmd` without its here-document bodies: a brief written with `cat > f <<'EOF'` is text, not commands,
+ * and one apostrophe in it would swallow the commands after it into a quote.
+ * shortcut: a `<<` inside a quoted string also starts one, dropping lines up to its word; fine for the commands a lead writes.
+ */
+export function dropHeredocs(cmd: string): string {
+  const out: string[] = []
+  const ends: string[] = []
+  for (const line of cmd.split('\n')) {
+    if (ends.length) {
+      if (line.replace(/^\t+/, '') === ends[0]) ends.shift()
+      continue
+    }
+    out.push(line)
+    for (const m of line.matchAll(/(?<!<)<<-?\s*(['"]?)([A-Za-z_]\w*)\1/g)) ends.push(m[2]!)
+  }
+  return out.join('\n')
+}
+
+/** Shell-ish split: quotes group, `;`, `&`, `|` and newlines end a command; here-document bodies are left out. */
 export function words(cmd: string): string[] {
+  cmd = dropHeredocs(cmd)
   const out: string[] = []
   let cur = ''
   let has = false

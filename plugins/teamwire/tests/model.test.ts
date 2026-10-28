@@ -47,6 +47,11 @@ test('dstack delegate.py calls are herdr calls: run prompts and waits, wait wait
     ['close', 'grok-s11-w4'],
     ['prompt', 'grok-vi1-review'],
   ])
+  // A brief written by a here-document in the same command: its text (an apostrophe, `&&`, `delegate.py run` words) is no command.
+  const heredoc = `S=/s; cat > $S/sub3.md <<'EOF'\nGoal: check the lead's panel. Run \`sleep 30 && wc -l x\`.\nNot this: python3 /x/delegate.py run --name fake --brief /b.md\nEOF\npython3 /p/delegate.py run --name grok-subview --brief $S/sub3.md --effort low`
+  expect(herdrCalls(heredoc).map(c => [c.target, c.brief])).toEqual([['grok-subview', '/s/sub3.md']])
+  expect(herdrCalls(`cat <<-END\n\tit's text\n\tEND\nherdr agent prompt wN:p2 "go"`).map(c => c.target)).toEqual(['wN:p2'])
+  expect(herdrCalls(`grep x <<< "it's"; herdr agent prompt wN:p2 go`).map(c => c.target)).toEqual(['wN:p2'])
   // A loop fans out to one member per value, each with its own brief.
   const loop = `${D}; for n in 1 2 3 4; do python3 $D run --name grok-s11-a$n --brief $S/brief-a$n.md > $S/run-a$n.log 2>&1 & done; wait`
   expect(herdrCalls(loop).map(c => [c.target, c.brief])).toEqual([1, 2, 3, 4].map(n => [`grok-s11-a${n}`, `/tmp/dstack-s/brief-a${n}.md`]))

@@ -1,5 +1,8 @@
 # teamwire 플러그인 변경 이력
 
+## 0.1.14
+- 한 명령 안에서 brief를 here-document로 쓰고(`cat > f <<'EOF' … EOF`) 바로 `delegate.py run`이나 `herdr agent prompt`를 실행하면 팀원이 안 잡히던 문제 수정(0.1.13 실사용 확인에서 발견): 본문의 작은따옴표(`lead's`)가 따옴표 시작으로 읽혀 뒤의 명령까지 삼켰음. 이제 명령을 나누기 전에 here-document 본문을 빼고 읽음
+
 ## 0.1.13
 - grok 팀원이 직접 부른 서브에이전트도 팀원으로 표시: grok이 서브에이전트마다 남기는 `~/.grok/sessions/<cwd>/<세션>/subagents/<id>/meta.json`(시작할 때 `running`, 끝나면 `completed`)을 2초마다 읽음. 세션 id는 `herdr agent list`의 `agent_session`(herdr의 grok 연동이 알려 줌). 이름은 서브에이전트 설명, 종류 `subagent · grok`, 모델과 도구 호출 수 표시. 생길 때 부모 grok에서 연결선과 메시지가 이어짐. 팀장이 일을 맡기기 전에 같은 grok이 부른 서브에이전트는 제외. `GROK_HOME`이 있으면 그 아래를 읽음
 
