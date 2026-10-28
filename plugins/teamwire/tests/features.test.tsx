@@ -322,22 +322,26 @@ test("a grok member's own subagents join the team from grok's session files, and
   let drawn = await draw()
   expect(drawn).toContain('How: agent install UI')
   expect(drawn).not.toContain('Earlier work')
-  // The subagent hangs off its grok's wire (a guide down from the grok, a ╰ corner), not off the lead's trunk.
+  // The subagent branches off its grok's node: a guide straight down from the grok's glyph to a ╰ corner, and nothing
+  // between the lead's trunk and that column, so it does not read as the lead's own task. Badges stay in one column.
+  const tree = (lines: string[], name: string, aligned = true) => {
+    const row = lines.findIndex(l => l.includes(name))
+    const at = lines[row - 3]!.indexOf('●')
+    expect(lines[row - 3]).toContain('ai-fe')
+    expect(lines[row]!.lastIndexOf('╰')).toBe(at)
+    expect(lines[row - 2]![at]).toBe('│')
+    expect(lines[row]!.slice(15, at).trim()).toBe('')
+    expect(lines[row]).not.toContain('◀')
+    if (aligned) expect(lines[row]!.indexOf('WORKING')).toBe(lines[row - 3]!.indexOf('WORKING'))
+  }
   const ui = await $.ui.mount({ plugin: 'teamwire', surface: 'terminal', component: 'Pane', requestId: 'teamwire', props: PROPS, viewport: { columns: 112, rows: 60 } } as never)
-  const lines = rows((await ui.drawn()) as Node)
+  tree(rows((await ui.drawn()) as Node), 'How:')
   await ui.unmount()
-  const row = lines.findIndex(l => l.includes('How: agent'))
-  expect(lines[row]!.slice(15)).toMatch(/^ {2}╰/)
-  expect(lines[row]).not.toContain('◀')
-  expect(lines.findIndex(l => l.includes('ai-fe'))).toBe(row - 3)
-  expect(lines[row - 2]!.slice(15)).toMatch(/^ {2}│/)
   // A narrow pane keeps the tree and runs no row past its width.
   const thin = await $.ui.mount({ plugin: 'teamwire', surface: 'terminal', component: 'Pane', requestId: 'teamwire', props: { ...PROPS, bodyColumns: 50 }, viewport: { columns: 52, rows: 60 } } as never)
   const narrow = rows((await thin.drawn()) as Node)
   await thin.unmount()
-  const kid = narrow.findIndex(l => l.includes('How:'))
-  expect(narrow[kid]!.slice(15)).toMatch(/^ {2}╰/)
-  expect(narrow[kid - 2]!.slice(15)).toMatch(/^ {2}│/)
+  tree(narrow, 'How', false) // too narrow to keep badges aligned: the name keeps four letters instead
   expect(Math.max(...narrow.slice(1).map(l => cells(l)))).toBeLessThanOrEqual(50)
   expect(tile(drawn, 'TEAM')).toBe('2')
   expect(tile(drawn, 'WORKING')).toBe('2')
