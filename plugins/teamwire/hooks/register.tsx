@@ -652,6 +652,8 @@ export const register: Register = on => {
       return !!next && isChild(next) && next.parent === (isChild(members[k]!) ? members[k]!.parent : members[k]!.id)
     }
     const fan = fanout(Math.max(1, n), members.map(m => !isChild(m)))
+    // How far a child's row sits right of its parent's: corner, a short wire, the arrow, a gap.
+    const KID = 5
     const boxC = lead.busy ? GOLD : COPPER
     const effort = (lead.effort ?? '').slice(0, 6)
     const leadCol = (r: number): Seg[] => {
@@ -679,14 +681,23 @@ export const register: Register = on => {
         continue
       }
       const color = COLOR[m.state]
-      const under: Seg[] = guide(k) ? [{ t: '  ' }, { t: '│', c: COPPER }, { t: ' '.repeat(L + 3) }] : [{ t: ' '.repeat(L + 6) }]
+      // A child's wire starts under its parent's glyph (L + 4 in) and its text sits KID further right.
+      const child = isChild(m)
+      const bar: Seg = { t: guide(k) ? '│' : ' ', c: COPPER }
+      const under: Seg[] = child
+        ? [{ t: ' '.repeat(L + 4) }, bar, { t: ' '.repeat(KID + 1) }]
+        : guide(k)
+          ? [{ t: ' '.repeat(L + 4) }, bar, { t: ' ' }]
+          : [{ t: ' '.repeat(L + 6) }]
+      // A child's name gives up KID cells to keep the badges in one column, but never below four letters.
+      const nameW = child ? Math.max(NW - KID, BTN + 5) : NW
+      const shown = oneLine(m.name, nameW - 1 - BTN)
       const stale = isStale(m, now)
       if ((r - 1) % 3 === 0) {
         const { dir, hot } = flowOf(m, now)
         const g = WIRE[m.kind]
         const cable = dir ? g.live : g.idle
-        const child = isChild(m)
-        const wireSegs: Seg[] = runs(wireCells(child ? L - 1 : L, dir, tick, hot ? 4 : 7)).map(({ v, n: len }) =>
+        const wireSegs: Seg[] = runs(wireCells(child ? KID - 3 : L, dir, tick, hot ? 4 : 7)).map(({ v, n: len }) =>
           v === 1
             ? { t: g.live.repeat(len), c: SPARK, b: true }
             : v === 2
@@ -696,7 +707,7 @@ export const register: Register = on => {
         diagram.push([
           ...head,
           ...(child
-            ? [{ t: '  ' }, { t: guide(k) ? '├' : '╰', c: COPPER }]
+            ? [{ t: ' '.repeat(L + 4) }, { t: guide(k) ? '├' : '╰', c: COPPER }]
             : [
                 { t: '─', c: COPPER },
                 { t: dir === 'in' ? '◀' : cable, c: dir ? color : COPPER, b: dir === 'in' },
@@ -705,14 +716,14 @@ export const register: Register = on => {
           { t: dir === 'out' ? '▶' : cable, c: dir ? color : COPPER, b: dir === 'out' },
           { t: ` ${GLYPH[m.state]} `, c: color, b: true },
           {
-            t: oneLine(m.name, NW - 1 - BTN),
+            t: shown,
             b: true,
             u: selected?.id === m.id,
             c: selected?.id === m.id ? GOLD : m.state === 'working' ? BUTTER : undefined,
-            ...(m.state === 'working' ? { shine: shineAt(cells(oneLine(m.name, NW - 1 - BTN)), tick, k * 5) } : {}),
+            ...(m.state === 'working' ? { shine: shineAt(cells(shown), tick, k * 5) } : {}),
             pick: { id: m.id, ...(k < 9 ? { hotkey: String(k + 1) } : {}) },
           },
-          { t: ' '.repeat(Math.max(1, NW - BTN - cells(oneLine(m.name, NW - 1 - BTN)))) },
+          { t: ' '.repeat(Math.max(1, nameW - BTN - cells(shown))) },
           stale ? { t: ` REPLY · ${dur(now - (m.stateAt ?? m.addedAt))} `, c: HONEY, bg: COPPER, b: true } : { t: ` ${BADGE[m.state]} `, c: INK, bg: color, b: true },
           ...(waiting?.id === m.id ? [{ t: ' ◆', c: GOLD }] : []),
         ])
