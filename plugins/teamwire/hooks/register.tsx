@@ -4,6 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Beat, Lead, Link, Member, MemberState, Msg } from '../types'
 import {
   ago,
+  briefLine,
   busyCount,
   cells,
   chronicle,
@@ -421,6 +422,8 @@ export const register: Register = on => {
     if (!calls.length) return next(e)
     let waitOn: string | undefined
     for (const c of calls) {
+      // A delegated grok's role is its brief's first line, when the file can be read.
+      if (c.brief) c.text = briefLine(await $.fs.read(c.brief).catch(() => undefined)) ?? c.text
       const now = await $.clock.now()
       const known = find(await read($, membersAtom), c.target)
       const id = known?.id ?? `herdr:${c.target}`
@@ -442,8 +445,11 @@ export const register: Register = on => {
         await note($, LEAD, id, c.text || c.verb)
       } else if (c.verb === 'read' && known) {
         await patch($, id, m => ({ ...m, state: m.state === 'reply' ? 'idle' : m.state, ...surge('in', now) }))
+      } else if (c.verb === 'close' && known) {
+        await patch($, id, m => ({ ...m, state: 'done', owed: false }))
       }
-      if (c.wait) waitOn = id
+      // A call the lead runs in the background holds nothing.
+      if (c.wait && !e.run_in_background) waitOn = id
     }
     if (waitOn) await update($, leadAtom, l => ({ ...l, waitingOn: waitOn }))
     try {
