@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import type { Member } from '../types'
-import { briefLine, busyCount, cells, fitRow, shineAt, shineRuns, fromSession, sessionFor, oneLine, padCells, chronicle, dur, fanout, gauge, isStale, kTokens, STALE_MS, flowOf, expandCalls, fromHerdr, herdrCalls, modelOnScreen, runs, shortModel, wireCells, wrapCells } from '../hooks/model'
+import { briefLine, busyCount, fromGrokSub, cells, fitRow, shineAt, shineRuns, fromSession, sessionFor, oneLine, padCells, chronicle, dur, fanout, gauge, isStale, kTokens, STALE_MS, flowOf, expandCalls, fromHerdr, herdrCalls, modelOnScreen, runs, shortModel, wireCells, wrapCells } from '../hooks/model'
 
 test('herdrCalls finds who the lead talks to, through quotes, options and chains', async () => {
   expect(herdrCalls(`herdr agent prompt wN:p2 "Review the diff; report \\"only\\" bugs" --wait --timeout 120000`)).toEqual([
@@ -60,6 +60,10 @@ test('dstack delegate.py calls are herdr calls: run prompts and waits, wait wait
   expect(briefLine('# Fix login\n\nGoal: the login form drops the session cookie.\n')).toBe('Goal: the login form drops the session cookie.')
   expect(briefLine('## Only a heading\n')).toBe('Only a heading')
   expect(briefLine(undefined)).toBeUndefined()
+})
+
+test("a grok subagent's status: running works, completed is done, a cancel or failure failed, an unknown status still works", async () => {
+  expect(['running', 'completed', 'cancelled', 'failed', 'timed_out', 'queued', undefined].map(s => fromGrokSub(s))).toEqual(['working', 'done', 'failed', 'failed', 'failed', 'working', 'working'])
 })
 
 const member = (patch: Partial<Member>): Member => ({ id: 'herdr:wN:p2', name: 'grok·p2', kind: 'herdr', engine: 'grok', role: '', state: 'idle', addedAt: 0, ...patch })
