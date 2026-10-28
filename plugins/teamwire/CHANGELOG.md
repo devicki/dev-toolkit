@@ -1,5 +1,8 @@
 # teamwire 플러그인 변경 이력
 
+## 0.1.12
+- dstack `delegate.py run`을 백그라운드로 돌리면 grok 팀원이 1초 만에 DONE이 되고 그 뒤로 상태를 따라가지 않던 문제 수정(0.1.11 실사용 확인에서 발견): 호출 직후 조회 때 grok이 아직 `herdr agent list`에 없어서 사라진 것으로 봤음. 이제 목록에서 한 번도 못 본 팀원은 일을 맡긴 뒤 2분 동안 시작 중으로 보고 상태를 유지
+
 ## 0.1.11
 - dstack `delegate.py`로 grok에 일을 맡기면 팀원이 하나도 안 잡히던 문제 수정: herdr 호출이 Python 안에서 일어나 명령에 `herdr`가 없었음. 이제 `delegate.py run`은 일 맡김(역할은 `--brief` 파일의 첫 줄, 못 읽으면 `delegate: <이름>`), `wait`는 기다림, `close`는 완료로 표시. 팀원 이름은 `--name`. `D=…/delegate.py; python3 $D …`처럼 명령 안에서 정한 변수와 `for n in 1 2 3 4`(또는 `{1..4}`) 반복문의 이름도 풀어서, 알 수 없는 이름(`$(…)`, 정하지 않은 변수)은 가짜 팀원을 만들지 않고 건너뜀
 - Bash를 `run_in_background`로 돌린 herdr 호출은 팀장을 기다림 상태로 두지 않음

@@ -227,7 +227,8 @@ test('a grok handed work through dstack delegate.py joins the team with its brie
   on('clock.every', () => ({ value: undefined }) as never)
   on('ui.open', () => ({ value: { isPlaced: true } }) as never)
   on('ui.toast', () => ({ value: undefined }) as never)
-  let agents = ['grok-s11-a1', 'grok-s11-a2'].map((name, i) => ({ agent: 'grok', agent_status: 'working', pane_id: `wA:p${i + 5}`, name }))
+  // delegate.py runs in the background: right after the call, its groks are not in herdr's list yet.
+  let agents: { agent: string; agent_status: string; pane_id: string; name: string }[] = []
   on('process.run', (_, e) => ok((e as { argv: string[] }).argv[2] === 'read' ? '' : JSON.stringify({ result: { agents } })))
   on('fs.read', (_, e) => ({ value: (e as { path: string }).path === '/s/brief-a1.md' ? '# Slice 1\n\nPort the login form to the new API.\n' : undefined }) as never)
   on('tool.call', () => ({ result: 'ok', text: 'ok' }) as never)
@@ -249,6 +250,8 @@ test('a grok handed work through dstack delegate.py joins the team with its brie
   expect(drawn).toContain('Port the login form to the new API.')
   expect(drawn).toContain('delegate: grok-s11-a2') // brief not readable: the name stands in
   expect(drawn).not.toContain('$n')
+  expect(tile(drawn, 'WORKING')).toBe('2')
+  agents = ['grok-s11-a1', 'grok-s11-a2'].map((name, i) => ({ agent: 'grok', agent_status: 'working', pane_id: `wA:p${i + 5}`, name }))
 
   // a1 finishes; the lead reads its report file, not the pane, then closes the tab: DONE, not REPLY READY forever.
   now += 60_000
