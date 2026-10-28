@@ -71,6 +71,10 @@ test('herdr states: a finished worker holds REPLY until the lead reads; fresh pr
   expect(fromHerdr(member({ state: 'idle' }), 'idle', 10_000)).toBe('idle')
   expect(fromHerdr(member({ state: 'working' }), 'blocked', 10_000)).toBe('blocked')
   expect(fromHerdr(member({ state: 'working' }), undefined, 10_000)).toBe('done')
+  // A delegated grok not listed yet is starting; once it has had a pane, leaving the list means it is gone.
+  expect(fromHerdr(member({ state: 'working', sentAt: 9_000 }), undefined, 10_000)).toBe('working')
+  expect(fromHerdr(member({ state: 'working', sentAt: 9_000, pane: 'wA:p5' }), undefined, 10_000)).toBe('done')
+  expect(fromHerdr(member({ state: 'working', sentAt: 0 }), undefined, 200_000)).toBe('done')
   // Work another session handed the pane does not move a member this lead has settled with.
   expect(fromHerdr(member({ state: 'reply', owed: false }), 'working', 10_000)).toBe('reply')
   expect(fromHerdr(member({ state: 'idle', owed: false }), 'blocked', 10_000)).toBe('idle')

@@ -6,6 +6,8 @@ export const BURST_MS = 4000
 export const STALE_MS = 5 * 60_000
 /** herdr may still report idle right after a prompt lands; trust it only after this. */
 const SETTLE_MS = 5000
+/** A grok `delegate.py` is still starting is not in herdr's list yet; it gets as long as delegate.py waits for it (90 s) and some. */
+const START_MS = 120_000
 
 /** `prompt`/`send` hand over work; `keys` only presses keys (an approval, Enter); `read` takes the answer; `wait` holds the lead; `close` ends the member. */
 export type HerdrCall = { verb: 'prompt' | 'send' | 'keys' | 'read' | 'wait' | 'close'; target: string; text?: string; brief?: string; wait: boolean }
@@ -274,7 +276,11 @@ export const shortModel = (m: string) => m.replace(/^claude-/, '').replace(/\[.*
 
 /** herdr's agent_status folded into a member's state. */
 export function fromHerdr(m: Member, status: string | undefined, now: number): MemberState {
-  if (status === undefined) return m.state === 'working' || m.state === 'blocked' ? 'done' : m.state
+  if (status === undefined) {
+    // Never seen in the list yet (no pane): starting, not gone.
+    if (m.pane === undefined && m.sentAt !== undefined && now - m.sentAt < START_MS) return m.state
+    return m.state === 'working' || m.state === 'blocked' ? 'done' : m.state
+  }
   // Busy with work another session handed it: not this lead's to show.
   if (m.owed === false) return m.state
   if (status === 'working') return 'working'
