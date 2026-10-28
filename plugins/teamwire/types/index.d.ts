@@ -41,6 +41,8 @@ export type Member = {
   owed?: boolean
   /** The Agent call behind a Claude agent, to match its return. */
   toolUseId?: string
+  /** The member that spawned it (a grok member's own subagent): drawn under that member, not off the lead. */
+  parent?: string
   /** A Claude agent the engine ran in the background: its Agent call returns at once. */
   bg?: boolean
   addedAt: number

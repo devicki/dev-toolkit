@@ -27,6 +27,7 @@ import {
   KIND_LABEL,
   LEAD,
   modelOnScreen,
+  nest,
   oneLine,
   padCells,
   runs,
@@ -91,6 +92,9 @@ const WIRE: Record<Member['kind'], { live: string; idle: string }> = {
 }
 
 type HerdrAgent = { agent: string; agent_status: string; pane_id: string; name?: string; cwd?: string; agent_session?: { value?: string } }
+
+// Briefs not on disk yet when their run was seen (the same command writes them): member id → path, read again each poll.
+const briefs = new Map<string, string>()
 
 // Last model·effort seen per loop ('' the lead's), so a model request writes state only on a change.
 const seen = new Map<string, string>()
@@ -220,6 +224,12 @@ const herdrAgents = async ($: EngineInterface): Promise<HerdrAgent[] | undefined
 
 const pollHerdr = async ($: EngineInterface) => {
   if (!(await read($, membersAtom)).some(m => m.kind === 'herdr')) return
+  for (const [id, path] of briefs) {
+    const m = (await read($, membersAtom)).find(x => x.id === id)
+    const line = m && m.state !== 'done' && m.state !== 'failed' ? briefLine(await $.fs.read(path).catch(() => undefined)) : undefined
+    if (line) await patch($, id, x => ({ ...x, role: oneLine(line, 400) }))
+    if (line || !m || m.state === 'done' || m.state === 'failed') briefs.delete(id)
+  }
   const agents = await herdrAgents($)
   if (!agents) return
   // One footer read per member whose model is not known yet.
@@ -252,7 +262,7 @@ const pollHerdr = async ($: EngineInterface) => {
 }
 
 /**
- * A grok member's own subagents join the team as members of their own, the way a Claude subagent's subagent does.
+ * A grok member's own subagents join the team under that member.
  * grok writes each to `<GROK_HOME>/sessions/<cwd, URL-encoded>/<session>/subagents/<id>/meta.json` from spawn to end;
  * herdr's grok hook reports the session id.
  */
@@ -276,7 +286,7 @@ const pollGrokSubs = async ($: EngineInterface, agents: HerdrAgent[]) => {
       }
       // A reused grok keeps the subagents of earlier work; only those since this lead's handoff are its team.
       if (!known && m.sentAt !== undefined && Date.parse(sub.started_at ?? '') < m.sentAt) continue
-      const state = fromGrokSub(sub.status)
+      const state = fromGrokSub(sub)
       const fields = { state, ...(sub.tool_calls !== undefined ? { tools: sub.tool_calls } : {}) }
       if (known) {
         if (known.state !== state || known.tools !== fields.tools) await patch($, id, x => ({ ...x, ...fields }))
@@ -287,13 +297,13 @@ const pollGrokSubs = async ($: EngineInterface, agents: HerdrAgent[]) => {
         name: oneLine(sub.description || 'subagent', 24),
         kind: 'subagent',
         engine: 'grok',
+        parent: m.id,
         role: oneLine(sub.prompt || sub.description || '', 400),
         ...fields,
         ...(sub.effective_model_id ? { model: shortModel(sub.effective_model_id) } : {}),
         ...surge('out', now),
       })
       await note($, m.id, id, sub.description || 'subagent')
-      await linkUp($, m.id, id)
     }
   }
 }
@@ -473,10 +483,12 @@ export const register: Register = on => {
     let waitOn: string | undefined
     for (const c of calls) {
       // A delegated grok's role is its brief's first line, when the file can be read.
-      if (c.brief) c.text = briefLine(await $.fs.read(c.brief).catch(() => undefined)) ?? c.text
+      const line = c.brief ? briefLine(await $.fs.read(c.brief).catch(() => undefined)) : undefined
+      if (line) c.text = line
       const now = await $.clock.now()
       const known = find(await read($, membersAtom), c.target)
       const id = known?.id ?? `herdr:${c.target}`
+      if (c.brief && !line) briefs.set(id, c.brief)
       if (c.verb === 'keys') {
         // A key press (an approval, Enter) is no handoff: a spark on the wire, nothing in COMMS.
         if (known) await patch($, id, m => ({ ...m, ...surge('out', now) }))
@@ -549,7 +561,7 @@ export const register: Register = on => {
     const { Box, Text, Button } = $.ui.resolve(e)
     const tick = await read($, tickAtom)
     const now = await $.clock.now()
-    const members = await read($, membersAtom)
+    const members = nest(await read($, membersAtom))
     const lead = await read($, leadAtom)
     const msgs = await read($, msgsAtom)
     const beats = await read($, beatsAtom)
@@ -633,7 +645,13 @@ export const register: Register = on => {
     const RAIL = link && link.until > now ? 3 : 0
     const NW = Math.max(10, Math.min(20, W - 41 - 12))
     const L = Math.max(4, Math.min(22, W - 41 - NW))
-    const fan = fanout(Math.max(1, n))
+    // A grok's own subagent hangs off its parent's wire; `guide` runs a line down from a parent to its next child.
+    const isChild = (m: Member) => !!m.parent && members.some(p => p.id === m.parent)
+    const guide = (k: number) => {
+      const next = members[k + 1]
+      return !!next && isChild(next) && next.parent === (isChild(members[k]!) ? members[k]!.parent : members[k]!.id)
+    }
+    const fan = fanout(Math.max(1, n), members.map(m => !isChild(m)))
     const boxC = lead.busy ? GOLD : COPPER
     const effort = (lead.effort ?? '').slice(0, 6)
     const leadCol = (r: number): Seg[] => {
@@ -661,13 +679,14 @@ export const register: Register = on => {
         continue
       }
       const color = COLOR[m.state]
-      const under = { t: ' '.repeat(L + 6) }
+      const under: Seg[] = guide(k) ? [{ t: '  ' }, { t: '│', c: COPPER }, { t: ' '.repeat(L + 3) }] : [{ t: ' '.repeat(L + 6) }]
       const stale = isStale(m, now)
       if ((r - 1) % 3 === 0) {
         const { dir, hot } = flowOf(m, now)
         const g = WIRE[m.kind]
         const cable = dir ? g.live : g.idle
-        const wireSegs: Seg[] = runs(wireCells(L, dir, tick, hot ? 4 : 7)).map(({ v, n: len }) =>
+        const child = isChild(m)
+        const wireSegs: Seg[] = runs(wireCells(child ? L - 1 : L, dir, tick, hot ? 4 : 7)).map(({ v, n: len }) =>
           v === 1
             ? { t: g.live.repeat(len), c: SPARK, b: true }
             : v === 2
@@ -676,8 +695,12 @@ export const register: Register = on => {
         )
         diagram.push([
           ...head,
-          { t: '─', c: COPPER },
-          { t: dir === 'in' ? '◀' : cable, c: dir ? color : COPPER, b: dir === 'in' },
+          ...(child
+            ? [{ t: '  ' }, { t: guide(k) ? '├' : '╰', c: COPPER }]
+            : [
+                { t: '─', c: COPPER },
+                { t: dir === 'in' ? '◀' : cable, c: dir ? color : COPPER, b: dir === 'in' },
+              ]),
           ...wireSegs,
           { t: dir === 'out' ? '▶' : cable, c: dir ? color : COPPER, b: dir === 'out' },
           { t: ` ${GLYPH[m.state]} `, c: color, b: true },
@@ -700,12 +723,12 @@ export const register: Register = on => {
         const room = Math.max(8, W - L - 28 - label.length - RAIL - (mx ? cells(mx) + 2 : 0))
         diagram.push([
           ...head,
-          under,
+          ...under,
           { t: label, c: color },
           { t: ` · ${oneLine([m.engine, m.model, m.effort].filter(Boolean).join(' · ') || '—', room)}`, d: true },
           ...(mx ? [{ t: `  ${mx}`, c: ASH }] : []),
         ])
-      } else diagram.push([...head, under, { t: oneLine(m.role || '—', Math.max(12, W - L - 21 - RAIL)), d: true }])
+      } else diagram.push([...head, ...under, { t: oneLine(m.role || '—', Math.max(12, W - L - 21 - RAIL)), d: true }])
     }
     // Two members talking: a rail on the right joins their rows, the arrow on the receiver's.
     if (RAIL && link) {

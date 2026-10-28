@@ -38,7 +38,7 @@
 | 子代理、隊友 | `agent.spawn`、`$.agent.list()`、`session.send` / `session.receive`；模型與 effort 來自每次模型請求（`turn.step`），核准等待來自 `tool.check`，工具呼叫次數與 token 來自 `tool.call` / `turn.complete` | 無 |
 | 領導 | `session.measure`（上下文視窗、費用）、`turn.start` / `turn.complete` | 無 |
 | 其他 Claude 工作階段 | 領導的 SendMessage（`session.send`）；狀態每 2 秒從各工作階段的狀態檔（`~/.claude/sessions/*.json`，只讀取）取得：工作中、等待核准或回答、閒置、已結束 | 無 |
-| herdr 面板中的 CLI 代理 | 領導執行的 `herdr agent prompt / send-keys / read / wait`，或 dstack 的 `delegate.py run / wait / close`；狀態每 2 秒從 `herdr agent list` 取得；模型從代理畫面底部讀取一次；grok 自己呼叫的子代理從 grok 的工作階段檔（`~/.grok/sessions/…/subagents/*/meta.json`）讀取並加為成員，工作階段 ID 由 herdr 的 grok 整合提供 | [herdr](https://herdr.dev) |
+| herdr 面板中的 CLI 代理 | 領導執行的 `herdr agent prompt / send-keys / read / wait`，或 dstack 的 `delegate.py run / wait / close`；狀態每 2 秒從 `herdr agent list` 取得；模型從代理畫面底部讀取一次；grok 自己呼叫的子代理從 grok 的工作階段檔（`~/.grok/sessions/…/subagents/*/meta.json`）讀取，掛在該 grok 之下，工作階段 ID 由 herdr 的 grok 整合提供 | [herdr](https://herdr.dev) |
 
 沒有 herdr 時，除了外部 CLI 代理之外都能運作。
 

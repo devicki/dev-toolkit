@@ -38,7 +38,7 @@
 | 서브에이전트, agent teams 팀원 | `agent.spawn`, `$.agent.list()`, `session.send` / `session.receive`. 모델과 effort는 매 모델 요청(`turn.step`), 승인 대기는 `tool.check`, 도구 호출 수와 토큰은 `tool.call` / `turn.complete`에서 | 없음 |
 | 팀장 | `session.measure`(context, 비용), `turn.start` / `turn.complete` | 없음 |
 | 다른 Claude 세션 | 팀장의 SendMessage (`session.send`). 상태는 2초마다 각 세션의 상태 파일(`~/.claude/sessions/*.json`, 읽기만)에서: 작업 중, 승인·질문 대기, 대기, 종료 | 없음 |
-| herdr 패널의 CLI 에이전트 | 팀장이 실행한 `herdr agent prompt / send-keys / read / wait`, 또는 dstack의 `delegate.py run / wait / close`. 상태는 2초마다 `herdr agent list`, 모델은 에이전트 화면 하단에서 한 번 읽음. grok이 직접 부른 서브에이전트는 grok 세션 파일(`~/.grok/sessions/…/subagents/*/meta.json`)에서 읽어 팀원으로 추가하며, 세션 id는 herdr의 grok 연동이 알려 줌 | [herdr](https://herdr.dev) |
+| herdr 패널의 CLI 에이전트 | 팀장이 실행한 `herdr agent prompt / send-keys / read / wait`, 또는 dstack의 `delegate.py run / wait / close`. 상태는 2초마다 `herdr agent list`, 모델은 에이전트 화면 하단에서 한 번 읽음. grok이 직접 부른 서브에이전트는 grok 세션 파일(`~/.grok/sessions/…/subagents/*/meta.json`)에서 읽어 그 grok 아래에 붙이며, 세션 id는 herdr의 grok 연동이 알려 줌 | [herdr](https://herdr.dev) |
 
 herdr가 없으면 외부 CLI 팀원만 빼고 모두 동작합니다.
 
