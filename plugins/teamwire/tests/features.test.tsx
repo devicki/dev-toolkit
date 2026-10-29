@@ -215,6 +215,35 @@ test('a lead that prompts its panes through a shell helper wires each pane, neve
   await ui.unmount()
 })
 
+test('a helper that starts its agents and prompts them in one command wires each once herdr lists it', async ($, on) => {
+  on('clock.now', () => ({ value: NOW }) as never)
+  on('clock.every', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('ui.toast', () => ({ value: undefined }) as never)
+  on('env.get', (_, e) => ({ value: (e as { name: string }).name === 'HERDR_PANE_ID' ? 'wN:pN' : undefined }) as never)
+  const agents = [{ agent: 'claude', agent_status: 'idle', pane_id: 'wN:pN', name: 'lead' }]
+  on('process.run', (_, e) => ok((e as { argv: string[] }).argv[2] === 'read' ? '' : JSON.stringify({ result: { agents } })))
+  // The command itself starts r6a..c: herdr lists them only once it runs.
+  on('tool.call', () => {
+    agents.push(...['a', 'b', 'c'].map(x => ({ agent: 'claude', agent_status: 'working', pane_id: `wN:p${x}`, name: `r6${x}` })))
+    return { result: 'ok', text: 'ok' } as never
+  })
+
+  await $.tool.call({
+    tool: 'Bash',
+    command: `run() { # name file pane\n  herdr agent start "$1" --kind claude --pane "$3" -- --dangerously-skip-permissions >/dev/null || return\n  herdr agent prompt "$1" "Write hello into $2." --wait --timeout 180000 >/dev/null\n}\npa=wN:pP\npb=$(herdr tab create --label r6b | jq -r .result.root_pane.pane_id)\nrun r6a a.txt "$pa" & run r6b b.txt "$pb" & wait`,
+  } as never)
+
+  const ui = await $.ui.mount({ plugin: 'teamwire', surface: 'terminal', component: 'Pane', requestId: 'teamwire', props: PROPS, viewport: { columns: 112, rows: 60 } } as never)
+  const drawn = JSON.stringify(await ui.drawn())
+  expect(drawn).toContain('r6a')
+  expect(drawn).toContain('Write hello into a.txt.')
+  expect(drawn).toContain('Write hello into b.txt.') // not `create`, from the `tab create --label r6b` before it
+  expect(drawn).not.toContain('r6c') // started, but this command never prompted it
+  expect(drawn).not.toContain('$1')
+  await ui.unmount()
+})
+
 test('answering a y/n prompt in a shell pane wires no member; a helper loop over workspaces adds no $p', async ($, on) => {
   on('clock.now', () => ({ value: NOW }) as never)
   on('clock.every', () => ({ value: undefined }) as never)
