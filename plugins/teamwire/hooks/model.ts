@@ -145,6 +145,15 @@ function subst(word: string, vars: Map<string, string[]>): string[] {
   return out
 }
 
+/** One set of variables per value of the loop variable `word` uses, so each pass names its own target. */
+function loopEnvs(word: string, vars: Map<string, string[]>): Map<string, string[]>[] {
+  const loop = [...word.matchAll(VAR)].map(m => m[1]!).find(v => (vars.get(v)?.length ?? 0) > 1)
+  return loop ? vars.get(loop)!.map(x => new Map(vars).set(loop, [x])) : [vars]
+}
+
+/** `word` with the variables it knows filled in; the rest stay as written (a value built at runtime stays unknown). */
+const fill = (word: string, vars: Map<string, string[]>) => word.replace(VAR, (m, v: string) => (vars.get(v)?.length === 1 ? vars.get(v)![0]! : m))
+
 /** `delegate.py run|wait|close --name X …` from word `at`: one call per name, a loop's brief paired with its name. */
 function delegateCall(w: string[], at: number, vars: Map<string, string[]>): HerdrCall[] {
   const verb = DELEGATE_VERBS[w[at] ?? '']
@@ -157,9 +166,7 @@ function delegateCall(w: string[], at: number, vars: Map<string, string[]>): Her
     else if (t.startsWith('--') && w[j + 1] !== undefined && w[j + 1] !== SEP) opt[t] = w[++j]!
   }
   const name = opt['--name'] ?? ''
-  const loop = [...name.matchAll(VAR)].map(m => m[1]!).find(v => (vars.get(v)?.length ?? 0) > 1)
-  const envs = loop ? vars.get(loop)!.map(x => new Map(vars).set(loop, [x])) : [vars]
-  return envs.flatMap(env =>
+  return loopEnvs(name, vars).flatMap(env =>
     subst(name, env)
       .filter(target => target && !isVar(target))
       .map(target => {
@@ -205,8 +212,15 @@ export function expandCalls(cmd: string, calls: HerdrCall[], panes: { pane_id: s
     const next = w[i + 1]
     named.push({ pane: p.pane_id, next: next && next !== SEP && !next.startsWith('-') && !isVar(next) && !paneOf(next) ? next : undefined })
   }
+  const vars = shellVars(w)
   return calls.flatMap(c => {
     if (!isVar(c.target)) return [c]
+    // A loop that builds its names (`for x in a b c; do herdr agent prompt "r6$x" …`) names each agent itself.
+    const looped = loopEnvs(c.target, vars).flatMap(env => {
+      const p = paneOf(fill(c.target, env))
+      return p ? [{ ...c, target: p.pane_id, ...(c.text !== undefined ? { text: fill(c.text, env) } : {}) }] : []
+    })
+    if (looped.length) return looped
     return named.map(n => ({ ...c, target: n.pane, ...(c.text !== undefined && isVar(c.text) ? { text: n.next ?? '' } : {}) }))
   })
 }
