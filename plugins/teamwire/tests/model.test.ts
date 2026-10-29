@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import type { Member } from '../types'
-import { briefLine, busyCount, fromGrokSub, nest, cells, fitRow, shineAt, shineRuns, fromSession, sessionFor, oneLine, padCells, chronicle, dur, fanout, gauge, isStale, kTokens, STALE_MS, flowOf, expandCalls, fromHerdr, herdrCalls, modelOnScreen, runs, shortModel, wireCells, wrapCells } from '../hooks/model'
+import { launchPrompt, briefLine, busyCount, fromGrokSub, nest, cells, fitRow, shineAt, shineRuns, fromSession, sessionFor, oneLine, padCells, chronicle, dur, fanout, gauge, isStale, kTokens, STALE_MS, flowOf, expandCalls, fromHerdr, herdrCalls, modelOnScreen, runs, shortModel, wireCells, wrapCells } from '../hooks/model'
 
 test('herdrCalls finds who the lead talks to, through quotes, options and chains', async () => {
   expect(herdrCalls(`herdr agent prompt wN:p2 "Review the diff; report \\"only\\" bugs" --wait --timeout 120000`)).toEqual([
@@ -16,6 +16,18 @@ test('herdrCalls finds who the lead talks to, through quotes, options and chains
   expect(herdrCalls(`herdr agent prompt wN:p4 "/teamwire" >/dev/null 2>&1`)).toEqual([{ verb: 'prompt', target: 'wN:p4', text: '/teamwire', wait: false }])
   expect(herdrCalls(`herdr agent list && git status`)).toEqual([])
   expect(herdrCalls(`echo "herdr agent prompt x hi"`)).toEqual([])
+})
+
+test('a command line typed into a shell that starts an agent with its task is a handoff; one without a task is not', async () => {
+  expect(herdrCalls(`herdr pane run w8:p7 'claude-yolo "Read /tmp/r9-brief.md and carry out the task in it."'\nherdr pane wait-output w8:p7 --match "R9 DONE" --lines 40 --timeout 300000 >/dev/null`)).toEqual([
+    { verb: 'prompt', target: 'w8:p7', text: 'Read /tmp/r9-brief.md and carry out the task in it.', wait: false },
+    { verb: 'wait', target: 'w8:p7', wait: true },
+  ])
+  expect(launchPrompt(`cd /repo && ~/.local/bin/codex --model gpt-5 "fix the flaky test"`)).toBe('fix the flaky test')
+  expect(launchPrompt(`claude-yolo`)).toBeUndefined()
+  expect(launchPrompt(`claude --model opus`)).toBeUndefined()
+  expect(launchPrompt(`echo "claude is great"`)).toBeUndefined()
+  expect(herdrCalls(`herdr pane run w8:p7 claude-yolo`)).toEqual([{ verb: 'send', target: 'w8:p7', text: 'claude-yolo', wait: false }])
 })
 
 test('a helper or loop that takes its pane as a variable becomes one call per pane the command names', async () => {

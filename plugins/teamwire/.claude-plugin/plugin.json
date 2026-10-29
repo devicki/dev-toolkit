@@ -1,6 +1,6 @@
 {
   "name": "teamwire",
-  "version": "0.1.18",
+  "version": "0.1.19",
   "description": "팀 작업 때 팀장 세션과 팀원(서브에이전트, agent teams, 다른 세션, herdr의 codex·grok 등)을 배선도 패널로 보여주고, 지시와 답이 오가는 흐름을 전류처럼 표시합니다.",
   "author": {
     "name": "devicki",
