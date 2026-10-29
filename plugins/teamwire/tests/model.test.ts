@@ -36,6 +36,18 @@ test('a helper or loop that takes its pane as a variable becomes one call per pa
   expect(expand(`ask() { herdr agent prompt "$1" "$2"; }`)).toEqual([])
 })
 
+test('a loop that builds agent names (`r6$x`) becomes one call per agent herdr lists by that name', async () => {
+  const agents = [{ pane_id: 'wN:p1' }, { pane_id: 'wN:p3G', name: 'r6a' }, { pane_id: 'wN:p3H', name: 'r6b' }, { pane_id: 'wN:p3J', name: 'r6c' }]
+  const cmd = `D="$PWD"\nfor x in a b c; do\n  herdr agent prompt "r6$x" "Create the file $D/$x.txt containing hello." --wait --timeout 240000 | jq -c '{name:"r6'$x'"}' &\ndone; wait`
+  expect(expandCalls(cmd, herdrCalls(cmd), agents, 'wN:p1')).toEqual([
+    { verb: 'prompt', target: 'wN:p3G', text: 'Create the file $D/a.txt containing hello.', wait: true },
+    { verb: 'prompt', target: 'wN:p3H', text: 'Create the file $D/b.txt containing hello.', wait: true },
+    { verb: 'prompt', target: 'wN:p3J', text: 'Create the file $D/c.txt containing hello.', wait: true },
+  ])
+  // A name herdr does not list yet is no member.
+  expect(expandCalls(`for x in d; do herdr agent prompt "r6$x" hi; done`, herdrCalls(`for x in d; do herdr agent prompt "r6$x" hi; done`), agents, 'wN:p1')).toEqual([])
+})
+
 test('dstack delegate.py calls are herdr calls: run prompts and waits, wait waits, close ends; names come from --name', async () => {
   const D = `D=/home/bot/.claude/plugins/cache/dev-toolkit/dstack/0.2.2/shared/scripts/delegate.py; S=/tmp/dstack-s`
   expect(herdrCalls(`${D}\npython3 $D run --name grok-s11-w8b --brief $S/step11/impl-w8.md --cwd /w/wt8 --model grok-4.7 --effort xhigh --timeout 7200 > $S/run.log 2>&1`)).toEqual([
