@@ -21,7 +21,10 @@ const VERBS: Record<string, HerdrCall['verb']> = {
   'agent read': 'read',
   'pane read': 'read',
   'agent wait': 'wait',
+  'pane wait-output': 'wait',
 }
+/** herdr's agent kinds, as a command or an alias of one (`claude-yolo`, `cursor-agent`). */
+const AGENT_CLI = /^(pi|claude|codex|gemini|cursor|devin|agy|cline|omp|mastracode|opencode|copilot|kimi|kiro|droid|amp|grok|hermes|kilo|qodercli|qwen|letta|maki|muse)(-[\w-]+)?$/
 const VALUED = new Set(['--source', '--until', '--timeout', '--lines', '--machine', '--session', '--remote'])
 const SEP = '\u0000'
 /** dstack's `delegate.py` runs herdr from Python, so its own subcommands are the calls; every one names the agent in `--name`. */
@@ -106,9 +109,27 @@ export function herdrCalls(cmd: string): HerdrCall[] {
       // Redirections (`>/dev/null`, `2>`) are the shell's, not the message's.
       else if (!t.startsWith('--') && !/^\d*[<>]/.test(t)) pos.push(t)
     }
-    if (pos[0]) calls.push({ verb, target: pos[0], ...(verb === 'prompt' || verb === 'send' ? { text: pos.slice(1).join(' ') } : {}), wait })
+    const text = pos.slice(1).join(' ')
+    // Typed into a shell, a command line that starts an agent with its task hands that task over.
+    const task = verb === 'send' ? launchPrompt(text) : undefined
+    if (pos[0]) calls.push({ verb: task ? 'prompt' : verb, target: pos[0], ...(verb === 'prompt' || verb === 'send' ? { text: task ?? text } : {}), wait })
   }
   return calls
+}
+
+/**
+ * The task in a command line that starts an agent with it (`claude-yolo "Read brief.md and do it"`), else undefined.
+ * shortcut: the longest plain argument with a space is the task, so a one-word task is missed and a long flag value could pass for one.
+ */
+export function launchPrompt(line: string): string | undefined {
+  const w = words(line)
+  for (let i = 0; i < w.length; i++) {
+    if ((i > 0 && w[i - 1] !== SEP) || !AGENT_CLI.test(w[i]!.replace(/^.*\//, ''))) continue
+    const args: string[] = []
+    for (let j = i + 1; j < w.length && w[j] !== SEP; j++) if (!w[j]!.startsWith('-')) args.push(w[j]!)
+    const task = args.sort((a, b) => b.length - a.length)[0]
+    if (task?.includes(' ')) return task
+  }
 }
 
 /**

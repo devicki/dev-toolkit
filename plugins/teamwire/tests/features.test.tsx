@@ -244,6 +244,24 @@ test('a helper that starts its agents and prompts them in one command wires each
   await ui.unmount()
 })
 
+test('a lead that starts claude in a new tab with the task on its command line wires it while it starts', async ($, on) => {
+  on('clock.now', () => ({ value: NOW }) as never)
+  on('clock.every', () => ({ value: undefined }) as never)
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('ui.toast', () => ({ value: undefined }) as never)
+  const agents: { agent: string; agent_status: string; pane_id: string }[] = [] // a shell pane: no agent yet
+  on('process.run', (_, e) => ok((e as { argv: string[] }).argv[2] === 'read' ? '' : JSON.stringify({ result: { agents } })))
+  on('tool.call', () => ({ result: 'ok', text: 'ok' }) as never)
+
+  await $.tool.call({ tool: 'Bash', command: `herdr pane run w8:p7 'claude-yolo "Read /tmp/r9-brief.md and carry out the task in it."'` } as never)
+  const ui = await $.ui.mount({ plugin: 'teamwire', surface: 'terminal', component: 'Pane', requestId: 'teamwire', props: PROPS, viewport: { columns: 112, rows: 60 } } as never)
+  const drawn = JSON.stringify(await ui.drawn())
+  expect(drawn).toContain('w8:p7')
+  expect(drawn).toContain('WORKING')
+  expect(drawn).toContain('Read /tmp/r9-brief.md')
+  await ui.unmount()
+})
+
 test('answering a y/n prompt in a shell pane wires no member; a helper loop over workspaces adds no $p', async ($, on) => {
   on('clock.now', () => ({ value: NOW }) as never)
   on('clock.every', () => ({ value: undefined }) as never)
