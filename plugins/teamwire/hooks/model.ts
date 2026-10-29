@@ -204,13 +204,21 @@ export function expandCalls(cmd: string, calls: HerdrCall[], panes: { pane_id: s
     return others.find(p => p.pane_id === word || p.name === word) ?? (bare.length === 1 && bare[0]!.pane_id !== self ? bare[0] : undefined)
   }
   const w = words(cmd)
-  const named: { pane: string; next?: string }[] = []
+  const named: { pane: string; next?: string; args: string[] }[] = []
   for (let i = 0; i < w.length; i++) {
     const p = paneOf(w[i]!)
     // A pane a literal call already names is that call's, not the helper's.
-    if (!p || named.some(n => n.pane === p.pane_id) || calls.some(c => c.target === w[i])) continue
+    if (!p || calls.some(c => c.target === w[i])) continue
     const next = w[i + 1]
-    named.push({ pane: p.pane_id, next: next && next !== SEP && !next.startsWith('-') && !isVar(next) && !paneOf(next) ? next : undefined })
+    let at = i
+    while (at > 0 && w[at - 1] !== SEP) at--
+    const args = []
+    for (let j = at + 1; j < w.length && w[j] !== SEP; j++) args.push(w[j]!)
+    const n = { pane: p.pane_id, next: next && next !== SEP && !next.startsWith('-') && !isVar(next) && !paneOf(next) ? next : undefined, args }
+    // The helper's call (`run r6a a.txt`) has the name first; an earlier `--label r6a` only mentions it.
+    const k = named.findIndex(x => x.pane === p.pane_id)
+    if (k < 0) named.push(n)
+    else if (at + 1 === i && named[k]!.args[0] !== w[i]) named[k] = n
   }
   const vars = shellVars(w)
   return calls.flatMap(c => {
@@ -221,7 +229,12 @@ export function expandCalls(cmd: string, calls: HerdrCall[], panes: { pane_id: s
       return p ? [{ ...c, target: p.pane_id, ...(c.text !== undefined ? { text: fill(c.text, env) } : {}) }] : []
     })
     if (looped.length) return looped
-    return named.map(n => ({ ...c, target: n.pane, ...(c.text !== undefined && isVar(c.text) ? { text: n.next ?? '' } : {}) }))
+    // A helper's text is its own arguments (`"… $2 …"`), else the word after the pane.
+    const said = (n: (typeof named)[number]) => {
+      const text = c.text!.replace(/\$\{?(\d)\}?/g, (m, k: string) => n.args[+k - 1] ?? m)
+      return isVar(text) ? (n.next ?? '') : text
+    }
+    return named.map(n => ({ ...c, target: n.pane, ...(c.text !== undefined && isVar(c.text) ? { text: said(n) } : {}) }))
   })
 }
 

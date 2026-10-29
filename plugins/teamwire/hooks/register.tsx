@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Beat, Lead, Link, Member, MemberState, Msg } from '../types'
-import type { GrokSub } from './model'
+import type { GrokSub, HerdrCall } from './model'
 import {
   ago,
   briefLine,
@@ -95,6 +95,9 @@ type HerdrAgent = { agent: string; agent_status: string; pane_id: string; name?:
 
 // Briefs not on disk yet when their run was seen (the same command writes them): member id → path, read again each poll.
 const briefs = new Map<string, string>()
+
+// Running commands whose variable targets named no agent herdr listed yet (the same command starts it): tool_use_id → what to match, and the panes listed before.
+const pending = new Map<string, { cmd: string; calls: HerdrCall[]; self?: string; seen: Set<string> }>()
 
 // Last model·effort seen per loop ('' the lead's), so a model request writes state only on a change.
 const seen = new Map<string, string>()
@@ -212,6 +215,44 @@ const pollAgents = async ($: EngineInterface) => {
   )
 }
 
+/** The lead hands work to herdr agents, presses their keys, reads or closes them; returns the member a foreground call holds the lead on. */
+const handOut = async ($: EngineInterface, calls: HerdrCall[], background: boolean) => {
+  let waitOn: string | undefined
+  for (const c of calls) {
+    // A delegated grok's role is its brief's first line, when the file can be read.
+    const line = c.brief ? briefLine(await $.fs.read(c.brief).catch(() => undefined)) : undefined
+    if (line) c.text = line
+    const now = await $.clock.now()
+    const known = find(await read($, membersAtom), c.target)
+    const id = known?.id ?? `herdr:${c.target}`
+    if (c.brief && !line) briefs.set(id, c.brief)
+    if (c.verb === 'keys') {
+      // A key press (an approval, Enter) is no handoff: a spark on the wire, nothing in COMMS.
+      if (known) await patch($, id, m => ({ ...m, ...surge('out', now) }))
+    } else if (c.verb === 'prompt' || c.verb === 'send') {
+      await wire(
+        $,
+        id,
+        { name: c.target, kind: 'herdr', engine: '', role: '', state: 'idle' },
+        {
+          ...(c.verb === 'prompt' ? { state: 'working' as const, model: undefined, ...(c.text ? { role: oneLine(c.text, 400) } : {}) } : {}),
+          sentAt: now,
+          owed: true,
+          ...surge('out', now),
+        },
+      )
+      await note($, LEAD, id, c.text || c.verb)
+    } else if (c.verb === 'read' && known) {
+      await patch($, id, m => ({ ...m, state: m.state === 'reply' ? 'idle' : m.state, ...surge('in', now) }))
+    } else if (c.verb === 'close' && known) {
+      await patch($, id, m => ({ ...m, state: 'done', owed: false }))
+    }
+    // A call the lead runs in the background holds nothing.
+    if (c.wait && !background) waitOn = id
+  }
+  return waitOn
+}
+
 const herdrAgents = async ($: EngineInterface): Promise<HerdrAgent[] | undefined> => {
   const r = await $.process.run(['herdr', 'agent', 'list']).catch(() => undefined)
   if (!r || r.exitCode !== 0) return
@@ -223,7 +264,7 @@ const herdrAgents = async ($: EngineInterface): Promise<HerdrAgent[] | undefined
 }
 
 const pollHerdr = async ($: EngineInterface) => {
-  if (!(await read($, membersAtom)).some(m => m.kind === 'herdr')) return
+  if (!pending.size && !(await read($, membersAtom)).some(m => m.kind === 'herdr')) return
   for (const [id, path] of briefs) {
     const m = (await read($, membersAtom)).find(x => x.id === id)
     const line = m && m.state !== 'done' && m.state !== 'failed' ? briefLine(await $.fs.read(path).catch(() => undefined)) : undefined
@@ -232,6 +273,12 @@ const pollHerdr = async ($: EngineInterface) => {
   }
   const agents = await herdrAgents($)
   if (!agents) return
+  for (const p of pending.values()) {
+    const calls = expandCalls(p.cmd, p.calls, agents.filter(a => !p.seen.has(a.pane_id)), p.self)
+    for (const c of calls) p.seen.add(c.target)
+    // Started while the command ran, so the lead's wait on it is already over or out of reach: it holds nothing.
+    if (calls.length) await handOut($, calls, true)
+  }
   // One footer read per member whose model is not known yet.
   const models = new Map<string, string>()
   for (const m of await read($, membersAtom)) {
@@ -473,52 +520,26 @@ export const register: Register = on => {
 
   // The lead driving herdr panes: prompts and keys run out, reads pull the answer in.
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
-    let calls = e.agentId ? [] : herdrCalls(e.command ?? '')
+    const cmd = e.command ?? ''
+    let calls = e.agentId ? [] : herdrCalls(cmd)
     const agents = calls.some(c => isVar(c.target) || c.verb === 'send') ? await herdrAgents($) : undefined
+    const vars = calls.filter(c => isVar(c.target))
+    const self = vars.length ? await $.env.get('HERDR_PANE_ID') : undefined
     // A helper or loop names its panes in its arguments, not after `herdr`.
-    if (calls.some(c => isVar(c.target))) calls = expandCalls(e.command ?? '', calls, agents ?? [], await $.env.get('HERDR_PANE_ID'))
+    if (vars.length) calls = expandCalls(cmd, calls, agents ?? [], self)
     // Text typed into a pane with no agent (a shell's y/n prompt) hands over no work.
     if (agents) calls = calls.filter(c => c.verb !== 'send' || agents.some(a => a.pane_id === c.target || a.name === c.target))
-    if (!calls.length) return next(e)
-    let waitOn: string | undefined
-    for (const c of calls) {
-      // A delegated grok's role is its brief's first line, when the file can be read.
-      const line = c.brief ? briefLine(await $.fs.read(c.brief).catch(() => undefined)) : undefined
-      if (line) c.text = line
-      const now = await $.clock.now()
-      const known = find(await read($, membersAtom), c.target)
-      const id = known?.id ?? `herdr:${c.target}`
-      if (c.brief && !line) briefs.set(id, c.brief)
-      if (c.verb === 'keys') {
-        // A key press (an approval, Enter) is no handoff: a spark on the wire, nothing in COMMS.
-        if (known) await patch($, id, m => ({ ...m, ...surge('out', now) }))
-      } else if (c.verb === 'prompt' || c.verb === 'send') {
-        await wire(
-          $,
-          id,
-          { name: c.target, kind: 'herdr', engine: '', role: '', state: 'idle' },
-          {
-            ...(c.verb === 'prompt' ? { state: 'working' as const, model: undefined, ...(c.text ? { role: oneLine(c.text, 400) } : {}) } : {}),
-            sentAt: now,
-            owed: true,
-            ...surge('out', now),
-          },
-        )
-        await note($, LEAD, id, c.text || c.verb)
-      } else if (c.verb === 'read' && known) {
-        await patch($, id, m => ({ ...m, state: m.state === 'reply' ? 'idle' : m.state, ...surge('in', now) }))
-      } else if (c.verb === 'close' && known) {
-        await patch($, id, m => ({ ...m, state: 'done', owed: false }))
-      }
-      // A call the lead runs in the background holds nothing.
-      if (c.wait && !e.run_in_background) waitOn = id
-    }
+    // Agents the command starts itself join once herdr lists them (`pollHerdr`).
+    if (vars.length) pending.set(e.tool_use_id, { cmd, calls: vars, self, seen: new Set((agents ?? []).map(a => a.pane_id)) })
+    if (!calls.length && !vars.length) return next(e)
+    const waitOn = await handOut($, calls, !!e.run_in_background)
     if (waitOn) await update($, leadAtom, l => ({ ...l, waitingOn: waitOn }))
     try {
       return await next(e)
     } finally {
       if (waitOn) await update($, leadAtom, l => (l.waitingOn === waitOn ? { ...l, waitingOn: undefined } : l))
       await pollHerdr($).catch(() => undefined)
+      pending.delete(e.tool_use_id)
     }
   }).catch(($, e, next) => next(e))
 
