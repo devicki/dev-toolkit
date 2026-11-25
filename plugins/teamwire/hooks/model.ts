@@ -106,10 +106,9 @@ export function herdrCalls(cmd: string): HerdrCall[] {
       const t = w[j]!
       if (t === '--wait') wait = true
       else if (VALUED.has(t)) j++
-      // Redirections (`>/dev/null`, `2>`) are the shell's, not the message's.
-      else if (!t.startsWith('--') && !/^\d*[<>]/.test(t)) pos.push(t)
+      else if (!t.startsWith('--') && !isRedirect(t)) pos.push(t)
     }
-    const text = pos.slice(1).join(' ')
+    const text = fill(pos.slice(1).join(' '), vars)
     // Typed into a shell, a command line that starts an agent with its task hands that task over.
     const task = verb === 'send' ? launchPrompt(text) : undefined
     if (pos[0]) calls.push({ verb: task ? 'prompt' : verb, target: pos[0], ...(verb === 'prompt' || verb === 'send' ? { text: task ?? text } : {}), wait })
@@ -212,6 +211,9 @@ export const briefLine = (file: unknown) => {
 /** A target or text the shell fills in (`"$1"`, `$p`), which the command string cannot name. */
 export const isVar = (s: string) => s.includes('$')
 
+/** A redirection (`>/dev/null`, `2>&1`): the shell's, never an argument or a message. */
+const isRedirect = (s: string) => /^\d*[<>]/.test(s)
+
 /**
  * Calls whose target is a shell variable, as one call per herdr pane the command names literally:
  * a loop's list (`for p in wE:pG wE:pS`) or a helper's arguments (`ask wE:pG "check A"`), the word after a pane then its text.
@@ -230,11 +232,11 @@ export function expandCalls(cmd: string, calls: HerdrCall[], panes: { pane_id: s
     const p = paneOf(w[i]!)
     // A pane a literal call already names is that call's, not the helper's.
     if (!p || calls.some(c => c.target === w[i])) continue
-    const next = w[i + 1]
     let at = i
     while (at > 0 && w[at - 1] !== SEP) at--
     const args = []
-    for (let j = at + 1; j < w.length && w[j] !== SEP; j++) args.push(w[j]!)
+    for (let j = at + 1; j < w.length && w[j] !== SEP; j++) if (!isRedirect(w[j]!)) args.push(w[j]!)
+    const next = w.slice(i + 1).find(x => !isRedirect(x))
     const n = { pane: p.pane_id, next: next && next !== SEP && !next.startsWith('-') && !isVar(next) && !paneOf(next) ? next : undefined, args }
     // The helper's call (`run r6a a.txt`) has the name first; an earlier `--label r6a` only mentions it.
     const k = named.findIndex(x => x.pane === p.pane_id)
