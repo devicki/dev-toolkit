@@ -126,6 +126,10 @@ test('herdr states: a finished worker holds REPLY until the lead reads; fresh pr
   expect(fromHerdr(member({ state: 'working', sentAt: 9_000 }), undefined, 10_000)).toBe('working')
   expect(fromHerdr(member({ state: 'working', sentAt: 9_000, pane: 'wA:p5' }), undefined, 10_000)).toBe('done')
   expect(fromHerdr(member({ state: 'working', sentAt: 0 }), undefined, 200_000)).toBe('done')
+  // A member whose tab the lead closed with its answer unread is done, so `clear finished` takes it.
+  expect(fromHerdr(member({ state: 'reply', pane: 'wA:p5' }), undefined, 10_000)).toBe('done')
+  expect(fromHerdr(member({ state: 'idle', pane: 'wA:p5' }), undefined, 10_000)).toBe('done')
+  expect(fromHerdr(member({ state: 'failed', pane: 'wA:p5' }), undefined, 10_000)).toBe('failed')
   // Work another session handed the pane does not move a member this lead has settled with.
   expect(fromHerdr(member({ state: 'reply', owed: false }), 'working', 10_000)).toBe('reply')
   expect(fromHerdr(member({ state: 'idle', owed: false }), 'blocked', 10_000)).toBe('idle')

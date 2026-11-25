@@ -1,5 +1,8 @@
 # teamwire 플러그인 변경 이력
 
+## 0.1.20
+- 답을 낸 팀원(REPLY READY)의 탭이나 pane을 팀장이 닫으면 REPLY로 계속 남아 `c clear finished`로도 안 지워지던 문제 수정: herdr 목록에서 사라진 팀원은 일하던 중일 때만 DONE으로 바꿨음. 이제 REPLY나 IDLE이었어도 목록에서 사라지면 DONE(실패였으면 FAILED 유지)이 되어 지울 수 있음
+
 ## 0.1.19
 - 새 탭의 셸에 에이전트를 띄우는 명령줄로 일을 맡기면(`herdr pane run <pane> 'claude-yolo "brief를 읽고 진행해"'`) 팀원이 안 잡히던 문제 수정: 에이전트가 없는 셸 pane에 보낸 텍스트(y/n 답 같은 것)로 보고 버렸음. 이제 에이전트 CLI(`claude`, `codex`, `grok` 등과 `claude-yolo` 같은 별칭)를 할 일과 함께 띄우는 명령줄이면 일 맡기기로 보고, 그 할 일을 역할로 씀. 할 일 없이 띄우기만 하면 그대로 무시
 - `herdr pane wait-output`을 팀장이 그 팀원을 기다리는 것으로 봄

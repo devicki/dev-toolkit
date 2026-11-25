@@ -364,7 +364,8 @@ export function fromHerdr(m: Member, status: string | undefined, now: number): M
   if (status === undefined) {
     // Never seen in the list yet (no pane): starting, not gone.
     if (m.pane === undefined && m.sentAt !== undefined && now - m.sentAt < START_MS) return m.state
-    return m.state === 'working' || m.state === 'blocked' ? 'done' : m.state
+    // Gone (its tab or pane closed, its agent exited): an unread answer can no longer be read there.
+    return m.state === 'failed' ? 'failed' : 'done'
   }
   // Busy with work another session handed it: not this lead's to show.
   if (m.owed === false) return m.state
