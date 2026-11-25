@@ -48,6 +48,18 @@ test('a helper or loop that takes its pane as a variable becomes one call per pa
   expect(expand(`ask() { herdr agent prompt "$1" "$2"; }`)).toEqual([])
 })
 
+test('a role fills the variables the command sets, and a redirection is never the task', async () => {
+  expect(herdrCalls(`S=/tmp/ready; herdr agent prompt aez3806-ready "배정 문서 $S/fix-ready-brief.md 를 읽고 그대로 진행해"`)).toEqual([
+    { verb: 'prompt', target: 'aez3806-ready', text: '배정 문서 /tmp/ready/fix-ready-brief.md 를 읽고 그대로 진행해', wait: false },
+  ])
+  // The name first appears as a tab label whose next word is a redirection; the prompt's own text is runtime-only.
+  const cmd = `P=$(herdr tab create --workspace wA --label aez3806-spec3 2>/dev/null | jq -r .result.root_pane.pane_id)\nherdr agent start aez3806-spec3 --kind claude --pane "$P"\nherdr agent prompt "$P" "$(cat $S/spec3.md)"`
+  expect(expandCalls(cmd, herdrCalls(cmd), [{ pane_id: 'wA:p9', name: 'aez3806-spec3' }], 'wA:p3')).toEqual([{ verb: 'prompt', target: 'wA:p9', text: '', wait: false }])
+  // The shell takes redirections out of a helper's arguments.
+  const helper = `ask() { herdr agent prompt "$1" "$2"; }\nask wE:pG 2>/dev/null "check A"`
+  expect(expandCalls(helper, herdrCalls(helper), [{ pane_id: 'wE:pG' }], 'wA:p3').map(c => c.text)).toEqual(['check A'])
+})
+
 test('a loop that builds agent names (`r6$x`) becomes one call per agent herdr lists by that name', async () => {
   const agents = [{ pane_id: 'wN:p1' }, { pane_id: 'wN:p3G', name: 'r6a' }, { pane_id: 'wN:p3H', name: 'r6b' }, { pane_id: 'wN:p3J', name: 'r6c' }]
   const cmd = `D="$PWD"\nfor x in a b c; do\n  herdr agent prompt "r6$x" "Create the file $D/$x.txt containing hello." --wait --timeout 240000 | jq -c '{name:"r6'$x'"}' &\ndone; wait`
@@ -126,6 +138,10 @@ test('herdr states: a finished worker holds REPLY until the lead reads; fresh pr
   expect(fromHerdr(member({ state: 'working', sentAt: 9_000 }), undefined, 10_000)).toBe('working')
   expect(fromHerdr(member({ state: 'working', sentAt: 9_000, pane: 'wA:p5' }), undefined, 10_000)).toBe('done')
   expect(fromHerdr(member({ state: 'working', sentAt: 0 }), undefined, 200_000)).toBe('done')
+  // A member whose tab the lead closed with its answer unread is done, so `clear finished` takes it.
+  expect(fromHerdr(member({ state: 'reply', pane: 'wA:p5' }), undefined, 10_000)).toBe('done')
+  expect(fromHerdr(member({ state: 'idle', pane: 'wA:p5' }), undefined, 10_000)).toBe('done')
+  expect(fromHerdr(member({ state: 'failed', pane: 'wA:p5' }), undefined, 10_000)).toBe('failed')
   // Work another session handed the pane does not move a member this lead has settled with.
   expect(fromHerdr(member({ state: 'reply', owed: false }), 'working', 10_000)).toBe('reply')
   expect(fromHerdr(member({ state: 'idle', owed: false }), 'blocked', 10_000)).toBe('idle')
